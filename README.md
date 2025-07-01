@@ -1,4 +1,4 @@
-# DeBank: Ứng dụng Ngân Hàng Phi Tập Trung (DApp) cho Người Mới Bắt Đầu
+# Ứng dụng Ngân Hàng Phi Tập Trung (DApp) cho Người Mới Bắt Đầu
 
 ## Mục lục
 
