@@ -1,0 +1,11 @@
+/* Các dòng @tailwind phải luôn nằm ở ĐẦU tệp CSS chính của bạn */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Đặt các style toàn cục khác (nếu có) SAU các dòng @tailwind */
+body {
+    /* Thiết lập font Inter cho toàn bộ body */
+    font-family: 'Inter', sans-serif;
+}
+/* QUAN TRỌNG: Loại bỏ dòng `@import './App.css';` khỏi đây. */
