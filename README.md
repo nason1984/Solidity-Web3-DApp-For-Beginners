@@ -1,4 +1,4 @@
-# Ứng dụng Ngân Hàng Phi Tập Trung (DApp) cho Người Mới Bắt Đầu
+# Ứng dụng Demo: Solidity, Web3, DApp - Ngân Hàng Phi Tập Trung
 
 ## Mục lục
 
