@@ -44,9 +44,10 @@
 
 **App Demo** là một dự án ứng dụng phi tập trung (Decentralized Application - DApp) được xây dựng trên nền tảng blockchain Ethereum. Nó mô phỏng các chức năng cơ bản của một ngân hàng truyền thống nhưng hoạt động hoàn toàn phi tập trung thông qua các smart contract.
 
-![image](https://github.com/user-attachments/assets/f346291d-6d85-4dd0-8e9e-7973a79f0f41)
+![image](https://github.com/user-attachments/assets/acbf9810-85e3-4b99-b06d-cd1f392b3e25)
 
-![image](https://github.com/user-attachments/assets/7197e80b-a07a-4a88-9740-a98ea76f2de6)
+
+![image](https://github.com/user-attachments/assets/88c0b5ff-032e-4db9-8ddd-624396b37ee2)
 
 
 ### 1.2. Mục tiêu và Mục đích
