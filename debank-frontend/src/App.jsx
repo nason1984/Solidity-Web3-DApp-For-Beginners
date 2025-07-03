@@ -188,7 +188,7 @@ function App() {
 
     } catch (error) {
       console.error("Lỗi khi khởi tạo contract instances:", error);
-      showAppModal(getErrorMessage(error, "Lỗi: Không thể khởi tạo smart contract. Vui lòng kiểm tra địa chỉ contract và mạng.")); // Sử dụng getErrorMessage
+      showAppModal(getErrorMessage(error, "Lỗi: Không thể khởi tạo smart contract. Vui lòng kiểm tra địa chỉ contract và mạng."));
       setVndtContract(null);
       setDebankContract(null);
     }
@@ -243,7 +243,7 @@ function App() {
       setDebankContract(null);
       setIsBankOwner(false);
       setCurrentPage(1);
-      showAppModal('Bạn đã ngắt kết nối ví khỏi ứng dụng DeBank.');
+      showAppModal('Bạn đã ngắt kết nối ví khỏi ứng dụng.');
     } else {
       showAppModal('Chưa có ví nào được kết nối để ngắt.');
     }
@@ -303,7 +303,7 @@ function App() {
     }
   };
 
-  // Hàm lấy số dư DeBank THẬT từ smart contract
+  // Hàm lấy số dư hệ thống THẬT từ smart contract
   const fetchDeBankBalance = async () => {
     if (isConnected && accounts.length > 0 && web3 && debankContract) {
       try {
@@ -311,15 +311,13 @@ function App() {
         const balanceVNDT = web3.utils.fromWei(balanceWei, 'ether');
         setDebankBalance(`${parseFloat(balanceVNDT).toLocaleString('vi-VN')} VNDT`);
       } catch (error) {
-        console.error("Lỗi khi lấy số dư DeBank:", error);
-        let errorMessage = getErrorMessage(error, "Lỗi khi lấy số dư DeBank: Không rõ nguyên nhân.");
+        console.error("Lỗi khi lấy số dư hệ thống:", error);
+        let errorMessage = getErrorMessage(error, "Lỗi khi lấy số dư hệ thống: Không rõ nguyên nhân.");
         
-        if (errorMessage.includes("DeBank: Account does not exist")) {
-            errorMessage = "Tài khoản của bạn chưa tồn tại trong DeBank (chưa có giao dịch gửi tiền).";
-        } else if (errorMessage.includes("DeBank: Insufficient balance")) {
-            errorMessage = "Số dư DeBank không đủ để thực hiện giao dịch.";
-        } else if (errorMessage.includes("VNDT transferFrom failed. Did you approve enough?")) {
-            errorMessage = "Lỗi: Bạn chưa phê duyệt đủ VNDT hoặc số dư VNDT trong ví không đủ.";
+        if (errorMessage.includes("Account does not exist")) {
+            errorMessage = "Tài khoản của bạn chưa tồn tại trong hệ thống (chưa có giao dịch gửi tiền).";
+        } else if (errorMessage.includes("Insufficient balance")) {
+            errorMessage = "Số dư hệ thống không đủ để thực hiện giao dịch.";
         }
         
         setDebankBalance('Lỗi khi lấy số dư');
@@ -362,7 +360,7 @@ function App() {
         console.error("Lỗi khi tải lịch sử giao dịch:", error);
         let errorMessage = getErrorMessage(error, "Lỗi khi tải lịch sử giao dịch: Không rõ nguyên nhân.");
 
-        if (errorMessage.includes("DeBank: Account does not exist")) {
+        if (errorMessage.includes("Account does not exist")) {
             setTransactionHistory([]);
         } else {
             showAppModal(errorMessage);
@@ -407,7 +405,7 @@ function App() {
     }
   };
 
-  // Hàm xử lý sự kiện click cho nút "Gửi Tiền" (DeBank.deposit)
+  // Hàm xử lý sự kiện click cho nút "Gửi Tiền" (Deposit)
   const handleDeposit = async () => {
     if (!isConnected || accounts.length === 0 || !debankContract || !web3) {
       showAppModal("Vui lòng kết nối ví và đảm bảo contract đã khởi tạo.");
@@ -429,7 +427,7 @@ function App() {
           return;
       }
 
-      showAppModal(`Đang gửi ${amountInput} VNDT vào DeBank. Vui lòng xác nhận trong MetaMask...`);
+      showAppModal(`Đang gửi ${amountInput} VNDT vào hệ thống. Vui lòng xác nhận trong MetaMask...`);
       
       const tx = await debankContract.methods.deposit(amountWei).send({ from: accounts[0] });
 
@@ -440,11 +438,11 @@ function App() {
       fetchTransactionHistory();
 
     } catch (error) {
-      console.error("Lỗi khi gửi tiền vào DeBank:", error);
-      let errorMessage = getErrorMessage(error, "Lỗi gửi tiền vào DeBank: Không rõ nguyên nhân.");
+      console.error("Lỗi khi gửi tiền vào hệ thống:", error);
+      let errorMessage = getErrorMessage(error, "Lỗi gửi tiền vào hệ thống: Không rõ nguyên nhân.");
 
       if (errorMessage.includes("VNDT transferFrom failed. Did you approve enough?") || errorMessage.includes("ERC20InsufficientAllowance")) { 
-          errorMessage = "Lỗi: Bạn chưa phê duyệt đủ VNDT cho DeBank.";
+          errorMessage = "Lỗi: Bạn chưa phê duyệt đủ VNDT cho hệ thống.";
       } else if (errorMessage.includes("ERC20InsufficientBalance")) {
           errorMessage = "Lỗi: Số dư VNDT trong ví của bạn không đủ để gửi.";
       }
@@ -452,7 +450,7 @@ function App() {
     }
   };
 
-  // Hàm xử lý sự kiện click cho nút "Rút Tiền" (DeBank.withdraw)
+  // Hàm xử lý sự kiện click cho nút "Rút Tiền" (Withdraw)
   const handleWithdraw = async () => {
     if (!isConnected || accounts.length === 0 || !debankContract || !web3) {
       showAppModal("Vui lòng kết nối ví và đảm bảo contract đã khởi tạo.");
@@ -468,7 +466,7 @@ function App() {
     try {
       const amountWei = web3.utils.toWei(amountInput, 'ether');
 
-      showAppModal(`Đang rút ${amountInput} VNDT từ DeBank. Vui lòng xác nhận trong MetaMask...`);
+      showAppModal(`Đang rút ${amountInput} VNDT từ hệ thống. Vui lòng xác nhận trong MetaMask...`);
       
       const tx = await debankContract.methods.withdraw(amountWei).send({ from: accounts[0] });
 
@@ -479,19 +477,19 @@ function App() {
       fetchTransactionHistory();
 
     } catch (error) {
-      console.error("Lỗi khi rút tiền từ DeBank:", error);
-      let errorMessage = getErrorMessage(error, "Lỗi rút tiền từ DeBank: Không rõ nguyên nhân.");
+      console.error("Lỗi khi rút tiền từ hệ thống:", error);
+      let errorMessage = getErrorMessage(error, "Lỗi rút tiền từ hệ thống: Không rõ nguyên nhân.");
 
-      if (errorMessage.includes("DeBank: Insufficient balance")) {
-          errorMessage = "Lỗi: Số dư DeBank không đủ để rút. Vui lòng kiểm tra số dư của bạn.";
-      } else if (errorMessage.includes("DeBank: Account does not exist")) {
-          errorMessage = "Lỗi: Tài khoản của bạn chưa tồn tại trong DeBank (chưa có giao dịch gửi tiền).";
+      if (errorMessage.includes("Insufficient balance")) {
+          errorMessage = "Lỗi: Số dư hệ thống không đủ để rút. Vui lòng kiểm tra số dư của bạn.";
+      } else if (errorMessage.includes("Account does not exist")) {
+          errorMessage = "Lỗi: Tài khoản của bạn chưa tồn tại trong hệ thống (chưa có giao dịch gửi tiền).";
       }
       showAppModal(errorMessage);
     }
   };
 
-  // Hàm xử lý sự kiện click cho nút "Chuyển Tiền" (DeBank.transfer)
+  // Hàm xử lý sự kiện click cho nút "Chuyển Tiền" (Transfer)
   const handleTransfer = async () => {
     if (!isConnected || accounts.length === 0 || !debankContract || !web3) {
       showAppModal("Vui lòng kết nối ví và đảm bảo contract đã khởi tạo.");
@@ -531,15 +529,15 @@ function App() {
       console.error("Lỗi khi chuyển tiền:", error);
       let errorMessage = getErrorMessage(error, "Lỗi chuyển tiền: Không rõ nguyên nhân.");
 
-      if (errorMessage.includes("DeBank: Insufficient balance")) {
-          errorMessage = "Lỗi: Số dư DeBank không đủ để chuyển. Vui lòng kiểm tra số dư của bạn.";
-      } else if (errorMessage.includes("DeBank: Account does not exist")) {
-          errorMessage = "Lỗi: Tài khoản của bạn chưa tồn tại trong DeBank (chưa có giao dịch gửi tiền).";
-      } else if (errorMessage.includes("DeBank: Daily transfer limit exceeded")) {
+      if (errorMessage.includes("Insufficient balance")) {
+          errorMessage = "Lỗi: Số dư hệ thống không đủ để chuyển. Vui lòng kiểm tra số dư của bạn.";
+      } else if (errorMessage.includes("Account does not exist")) {
+          errorMessage = "Lỗi: Tài khoản của bạn chưa tồn tại trong hệ thống (chưa có giao dịch gửi tiền).";
+      } else if (errorMessage.includes("Daily transfer limit exceeded")) {
           errorMessage = "Lỗi: Bạn đã vượt quá hạn mức chuyển tiền hàng ngày.";
-      } else if (errorMessage.includes("DeBank: Zero address not allowed")) {
+      } else if (errorMessage.includes("Zero address not allowed")) {
           errorMessage = "Lỗi: Địa chỉ người nhận không hợp lệ (địa chỉ 0x0).";
-      } else if (errorMessage.includes("DeBank: Cannot transfer to yourself")) {
+      } else if (errorMessage.includes("Cannot transfer to yourself")) {
           errorMessage = "Lỗi: Không thể chuyển tiền cho chính bạn.";
       }
       showAppModal(errorMessage);
@@ -694,14 +692,14 @@ function App() {
     }
 
     try {
-      showAppModal("Đang tạm dừng hợp đồng DeBank. Vui lòng xác nhận trong MetaMask...");
+      showAppModal("Đang tạm dừng hợp đồng. Vui lòng xác nhận trong MetaMask...");
       const tx = await debankContract.methods.pause().send({ from: accounts[0] });
       showAppModal(`Hợp đồng đã tạm dừng thành công! Tx Hash: ${tx.transactionHash}`);
     } catch (error) {
       console.error("Lỗi khi tạm dừng hợp đồng:", error);
       let errorMessage = getErrorMessage(error, "Lỗi tạm dừng hợp đồng: Không rõ nguyên nhân.");
       if (errorMessage.includes("Only bank owner can call this function")) {
-          errorMessage = "Lỗi: Bạn không phải chủ sở hữu ngân hàng để thực hiện chức năng này.";
+          errorMessage = "Lỗi: Bạn không phải chủ sở hữu hợp đồng để thực hiện chức năng này.";
       } else if (errorMessage.includes("Pausable: paused")) {
           errorMessage = "Lỗi: Hợp đồng đã tạm dừng trước đó.";
       }
@@ -716,14 +714,14 @@ function App() {
     }
 
     try {
-      showAppModal("Đang khởi động lại hợp đồng DeBank. Vui lòng xác nhận trong MetaMask...");
+      showAppModal("Đang khởi động lại hợp đồng. Vui lòng xác nhận trong MetaMask...");
       const tx = await debankContract.methods.unpause().send({ from: accounts[0] });
       showAppModal(`Hợp đồng đã khởi động lại thành công! Tx Hash: ${tx.transactionHash}`);
     } catch (error) {
       console.error("Lỗi khi khởi động lại hợp đồng:", error);
       let errorMessage = getErrorMessage(error, "Lỗi khởi động lại hợp đồng: Không rõ nguyên nhân.");
       if (errorMessage.includes("Only bank owner can call this function")) {
-          errorMessage = "Lỗi: Bạn không phải chủ sở hữu ngân hàng để thực hiện chức năng này.";
+          errorMessage = "Lỗi: Bạn không phải chủ sở hữu hợp đồng để thực hiện chức năng này.";
       } else if (errorMessage.includes("Pausable: not paused")) {
           errorMessage = "Lỗi: Hợp đồng chưa tạm dừng trước đó.";
       }
@@ -731,20 +729,15 @@ function App() {
     }
   };
 
-  // --- Hàm xử lý sự kiện click cho nút "Gửi Tiết Kiệm" (DeBank.depositSavings) ---
-  // Gửi VNDT vào tài khoản tiết kiệm của người dùng.
   const handleDepositSavings = async () => {
-    // 1. Kiểm tra các điều kiện cần thiết
     if (!isConnected || accounts.length === 0 || !debankContract || !web3) {
       showAppModal("Vui lòng kết nối ví và đảm bảo contract đã khởi tạo.");
       return;
     }
 
-    // 2. Lấy số tiền và kỳ hạn từ input
     const amountInput = document.getElementById('savingsAmount').value;
     const durationInput = document.getElementById('savingsDuration').value;
 
-    // 3. Kiểm tra tính hợp lệ của input
     if (!amountInput || parseFloat(amountInput) <= 0) {
       showAppModal("Vui lòng nhập số tiền hợp lệ để gửi tiết kiệm.");
       return;
@@ -755,18 +748,15 @@ function App() {
     }
 
     try {
-      // Chuyển đổi số tiền nhập vào sang đơn vị token nhỏ nhất (wei)
       const amountWei = web3.utils.toWei(amountInput, 'ether');
       const durationMonths = parseInt(durationInput);
 
       showAppModal(`Đang gửi ${amountInput} VNDT vào tiết kiệm kỳ hạn ${durationMonths} tháng. Vui lòng xác nhận trong MetaMask...`);
       
-      // Gọi hàm `depositSavings` trên contract DeBank.
       const tx = await debankContract.methods.depositSavings(amountWei, durationMonths).send({ from: accounts[0] });
 
       showAppModal(`Gửi tiết kiệm thành công! Tx Hash: ${tx.transactionHash}`);
       
-      // Sau khi giao dịch thành công, cập nhật lại số dư DeBank và lịch sử
       fetchDeBankBalance(); 
       fetchTransactionHistory();
 
@@ -774,10 +764,10 @@ function App() {
       console.error("Lỗi khi gửi tiết kiệm:", error);
       let errorMessage = getErrorMessage(error, "Lỗi gửi tiết kiệm: Không rõ nguyên nhân.");
 
-      if (errorMessage.includes("DeBank: Insufficient balance")) {
-          errorMessage = "Lỗi: Số dư DeBank không đủ để gửi tiết kiệm. Vui lòng nạp thêm VNDT vào DeBank.";
-      } else if (errorMessage.includes("DeBank: Account does not exist")) {
-          errorMessage = "Lỗi: Tài khoản của bạn chưa tồn tại trong DeBank (chưa có giao dịch gửi tiền).";
+      if (errorMessage.includes("Insufficient balance")) {
+          errorMessage = "Lỗi: Số dư hệ thống không đủ để gửi tiết kiệm. Vui lòng nạp thêm VNDT vào hệ thống.";
+      } else if (errorMessage.includes("Account does not exist")) {
+          errorMessage = "Lỗi: Tài khoản của bạn chưa tồn tại trong hệ thống (chưa có giao dịch gửi tiền).";
       } else if (errorMessage.includes("Savings duration must be between 1 and 60 months")) {
           errorMessage = "Lỗi: Kỳ hạn tiết kiệm phải từ 1 đến 60 tháng.";
       } else if (errorMessage.includes("Savings deposit amount must be greater than zero")) {
@@ -804,7 +794,7 @@ function App() {
 
       <header className="bg-[#0077B6] p-4 text-white shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-3xl font-bold">DeBank 🏦</h1>
+          <h1 className="text-3xl font-bold">App Demo Solidity, Web3, DApp</h1> {/* Đổi tên ứng dụng */}
           <button
             id="connectWalletBtn"
             onClick={isConnected ? disconnectWallet : connectWallet}
@@ -848,10 +838,10 @@ function App() {
               <span id="ethBalance" className="text-xl font-bold text-gray-700">{ethBalance}</span>
           </div>
           <div className="flex items-center justify-between mb-6">
-            <span className="text-lg font-medium">Số Dư DeBank:</span>
+            <span className="text-lg font-medium">Số Dư Hệ Thống:</span> {/* Đổi tên để tránh nhầm lẫn */}
             <span id="debankBalance" className="text-2xl font-bold text-[#00A1E4]">{debankBalance}</span>
           </div>
-          <p className="text-sm text-gray-500 italic">Số dư hiển thị là VNDT đang có trong tài khoản DeBank của bạn trên blockchain.</p>
+          <p className="text-sm text-gray-500 italic">Số dư hiển thị là VNDT đang có trong tài khoản của bạn trên hợp đồng thông minh.</p>
         </section>
 
         <section className="lg:col-span-2 bg-white rounded-xl shadow-xl p-6 mb-6">
@@ -879,8 +869,8 @@ function App() {
           </div>
 
           <div id="depositContent" className={`tab-content ${activeTab === 'deposit' ? 'active' : ''}`}>
-            <h3 className="text-xl font-semibold text-[#0077B6] mb-4">Gửi Tiền vào DeBank</h3>
-            <p className="text-gray-600 mb-4">Bạn cần phê duyệt (approve) cho DeBank smart contract quyền chi tiêu VNDT từ ví của bạn trước khi gửi tiền.</p>
+            <h3 className="text-xl font-semibold text-[#0077B6] mb-4">Gửi Tiền vào Hệ Thống</h3>
+            <p className="text-gray-600 mb-4">Bạn cần phê duyệt (approve) cho hợp đồng hệ thống quyền chi tiêu VNDT từ ví của bạn trước khi gửi tiền.</p>
             <div className="mb-4">
               <label htmlFor="depositAmount" className="block text-sm font-medium text-gray-700 mb-2">Số tiền VNDT muốn gửi:</label>
               <input type="number" id="depositAmount" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-[#00A1E4] focus:border-[#00A1E4]" placeholder="Nhập số VNDT" min="0.001" />
@@ -904,7 +894,7 @@ function App() {
           </div>
 
           <div id="withdrawContent" className={`tab-content ${activeTab === 'withdraw' ? 'active' : ''}`}>
-            <h3 className="text-xl font-semibold text-[#0077B6] mb-4">Rút Tiền từ DeBank</h3>
+            <h3 className="text-xl font-semibold text-[#0077B6] mb-4">Rút Tiền từ Hệ Thống</h3>
             <div className="mb-4">
               <label htmlFor="withdrawAmount" className="block text-sm font-medium text-gray-700 mb-2">Số tiền VNDT muốn rút:</label>
               <input type="number" id="withdrawAmount" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-[#00A1E4] focus:border-[#00A1E4]" placeholder="Nhập số VNDT" min="0.001" />
@@ -919,7 +909,7 @@ function App() {
           </div>
 
           <div id="transferContent" className={`tab-content ${activeTab === 'transfer' ? 'active' : ''}`}>
-            <h3 className="text-xl font-semibold text-[#0077B6] mb-4">Chuyển Tiền Trong DeBank</h3>
+            <h3 className="text-xl font-semibold text-[#0077B6] mb-4">Chuyển Tiền Trong Hệ Thống</h3>
             <div className="mb-4">
               <label htmlFor="recipientAddress" className="block text-sm font-medium text-gray-700 mb-2">Địa chỉ người nhận:</label>
               <input type="text" id="recipientAddress" className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-[#00A1E4] focus:border-[#00A1E4]" placeholder="Ví dụ: 0xAbC...123" />
@@ -955,7 +945,7 @@ function App() {
             <button
               id="depositSavingsBtn"
               className="w-full bg-[#00A1E4] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#0077B6] transition-colors shadow-md"
-              onClick={handleDepositSavings} // Gắn hàm xử lý sự kiện
+              onClick={handleDepositSavings}
             >
               Gửi Tiết Kiệm
             </button>
@@ -979,7 +969,6 @@ function App() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {/* Sử dụng getPaginatedHistory() để hiển thị chỉ các bản ghi của trang hiện tại */}
                 {getPaginatedHistory().map((tx, index) => (
                   <tr key={index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{tx.id}</td>
@@ -1000,7 +989,6 @@ function App() {
                 ))}
               </tbody>
             </table>
-            {/* THÊM: Điều khiển phân trang */}
             {transactionHistory.length > 0 && (
               <div className="flex justify-center items-center mt-4 space-x-2">
                 <button
@@ -1010,7 +998,6 @@ function App() {
                 >
                   Trước
                 </button>
-                {/* Hiển thị các nút số trang */}
                 {[...Array(totalPages)].map((_, i) => (
                   <button
                     key={i + 1}
@@ -1040,12 +1027,11 @@ function App() {
           </div>
         </section>
 
-        {/* Bảng Điều Khiển Quản Trị (Đơn giản) */}
-        {/* CHỈ HIỂN THỊ NẾU TÀI KHOẢN KẾT NỐI LÀ BANK OWNER */}
+        {/* Bảng Điều Khiển Quản Trị (Chỉ hiển thị nếu là chủ sở hữu hợp đồng) */}
         {isBankOwner && (
           <section className="lg:col-span-3 bg-white rounded-xl shadow-xl p-6 mb-6">
             <h2 className="text-2xl font-bold text-[#005082] mb-4">Bảng Điều Khiển Cấp Quyền và Quản Trị</h2>
-            <p className="text-gray-600 mb-4">Bạn đang đăng nhập với tư cách chủ sở hữu ngân hàng. Bạn có thể thực hiện các chức năng quản trị sau.</p>
+            <p className="text-gray-600 mb-4">Bạn đang đăng nhập với tư cách chủ sở hữu hợp đồng. Bạn có thể thực hiện các chức năng quản trị sau.</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[#CAF0F8] p-4 rounded-lg shadow-sm">
@@ -1120,7 +1106,7 @@ function App() {
       </main>
 
       <footer className="bg-[#0077B6] p-4 text-center text-white mt-auto">
-        <p class="text-sm">© 2025 DeBank. Được phát triển để học và trải nghiệm Solidity.</p>
+        <p class="text-sm">© 2025 Ứng dụng Demo. Được phát triển để học và trải nghiệm Solidity.</p> {/* Đổi tên footer */}
       </footer>
     </div>
   );
