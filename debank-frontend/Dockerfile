@@ -1,42 +1,42 @@
-# Sử dụng Node.js bản LTS làm image cơ sở để build ứng dụng React
+# Use Node.js LTS version as the base image for building the React application
 FROM node:lts-alpine as builder
 
-# Đặt thư mục làm việc bên trong container
+# Set the working directory inside the container
 WORKDIR /app
 
-# Sao chép file package.json và package-lock.json để cài đặt dependencies
-# Sử dụng wildcard để đảm bảo sao chép cả hai loại file lock
+# Copy package.json and package-lock.json files to install dependencies
+# Use a wildcard to ensure both lock files are copied
 COPY package*.json ./
 
-# Cài đặt các dependencies của dự án
-# Lệnh `--force` có thể cần thiết nếu có xung đột phiên bản nhỏ
+# Install project dependencies
+# The `--force` command might be necessary if there are minor version conflicts
 RUN npm install --force
 
-# Sao chép toàn bộ mã nguồn của ứng dụng React vào thư mục làm việc trong container
+# Copy the entire React application source code into the working directory in the container
 COPY . .
 
-# Build ứng dụng React cho môi trường production
-# Lệnh `npm run build` sẽ tạo ra thư mục `dist` chứa các file tĩnh đã tối ưu
+# Build the React application for the production environment
+# The `npm run build` command will create a `dist` directory containing optimized static files
 RUN npm run build
 
-# Sử dụng image Nginx Alpine làm image cơ sở cho giai đoạn production
-# Nginx là một web server nhẹ và hiệu quả để phục vụ các file tĩnh
+# Use Nginx Alpine image as the base image for the production stage
+# Nginx is a lightweight and efficient web server for serving static files
 FROM nginx:alpine
 
-# Xóa cấu hình Nginx mặc định
-# Điều này để chúng ta có thể thêm cấu hình tùy chỉnh của riêng mình
+# Remove the default Nginx configuration
+# This allows us to add our own custom configuration
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Sao chép file cấu hình Nginx tùy chỉnh của chúng ta vào đúng vị trí trong container
+# Copy our custom Nginx configuration file to the correct location in the container
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Sao chép các file ứng dụng React đã được build từ giai đoạn 'builder' vào thư mục phục vụ của Nginx
-# Thư mục `dist` chứa các file output từ quá trình build của React
+# Copy the built React application files from the 'builder' stage to Nginx's serving directory
+# The `dist` directory contains the output files from the React build process
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Mở cổng 80 trong container để Nginx có thể lắng nghe các kết nối HTTP
+# Expose port 80 in the container for Nginx to listen for HTTP connections
 EXPOSE 80
 
-# Lệnh mặc định khi container khởi chạy: Khởi động Nginx ở chế độ foreground
-# Điều này giữ cho container chạy liên tục
+# Default command when the container starts: Start Nginx in foreground mode
+# This keeps the container running continuously
 CMD ["nginx", "-g", "daemon off;"]

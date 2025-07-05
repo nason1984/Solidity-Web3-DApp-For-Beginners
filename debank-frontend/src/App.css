@@ -1,6 +1,6 @@
 /* Custom styles cho modal */
 .modal {
-    display: flex; /* Đảm bảo modal hiển thị flex khi `showModal` là true */
+    display: flex; 
     position: fixed;
     z-index: 1000;
     left: 0;
@@ -22,11 +22,11 @@
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     text-align: center;
-    position: relative; /* Quan trọng cho vị trí tuyệt đối của nút đóng */
+    position: relative;
 }
 .close-button {
     color: #aaa;
-    position: absolute; /* Vị trí tuyệt đối bên trong modal-content */
+    position: absolute;
     top: 10px;
     right: 20px;
     font-size: 28px;
@@ -39,10 +39,9 @@
     text-decoration: none;
 }
 
-/* Các style cho nút Tab */
 .tab-button.active {
-    border-bottom: 3px solid #00A1E4; /* Màu primary-blue từ palette */
-    color: #00A1E4; /* Màu primary-blue từ palette */
+    border-bottom: 3px solid #00A1E4;
+    color: #00A1E4;
     font-weight: 600;
 }
 .tab-content {
@@ -52,14 +51,9 @@
     display: block;
 }
 
-/* Thêm CSS Reset cơ bản để đảm bảo style đồng nhất giữa các trình duyệt */
 html, body, #root {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
 }
-/* Loại bỏ `font-family` cho `body` khỏi đây, nó đã được đặt trong `index.css` */
-/* body {
-    font-family: 'Inter', sans-serif;
-} */

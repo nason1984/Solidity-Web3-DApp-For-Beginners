@@ -1,325 +1,327 @@
 // SPDX-License-Identifier: MIT
-// Đây là chỉ định giấy phép của mã nguồn. MIT License là một giấy phép mã nguồn mở phổ biến,
-// cho phép người khác sử dụng, sửa đổi và phân phối mã nguồn một cách tự do.
+// This specifies the license for the source code. The MIT License is a popular open-source license
+// that allows others to freely use, modify, and distribute the code.
 
 pragma solidity ^0.8.20;
-// Khai báo phiên bản trình biên dịch Solidity mà contract này yêu cầu.
-// Dấu "^" (caret) có nghĩa là mã nguồn tương thích với phiên bản 0.8.20 trở lên,
-// nhưng không vượt quá 0.9.0 (tức là không bao gồm 0.9.0 trở đi).
-// Điều này giúp đảm bảo mã của bạn sẽ biên dịch thành công với các phiên bản tương lai nhỏ.
+// Declares the Solidity compiler version required for this contract.
+// The caret `^` means the code is compatible with version 0.8.20 and up,
+// but not including 0.9.0 or later. This ensures your code compiles successfully
+// with minor future versions.
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// Import giao diện IERC20 từ thư viện OpenZeppelin.
-// IERC20 là một tập hợp các hàm (interface) mà mọi token ERC-20 phải triển khai.
-// Contract DeBank của chúng ta sẽ không phải là một token ERC-20, nhưng nó sẽ tương tác
-// với token VNDT (là một ERC-20), vì vậy chúng ta cần giao diện này để gọi các hàm của VNDT.
+// Imports the IERC20 interface from the OpenZeppelin library.
+// IERC20 is a set of functions (interface) that every ERC-20 token must implement.
+// Our DeBank contract will not be an ERC-20 token itself, but it will interact
+// with the VNDT token (which is an ERC-20), so we need this interface to call VNDT's functions.
 
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-// Import giao diện IERC20Metadata từ thư viện OpenZeppelin.
-// Giao diện này mở rộng IERC20 để bao gồm các hàm đọc metadata như `name()`, `symbol()`, và `decimals()`.
-// Chúng ta cần nó để truy cập hàm `decimals()` của VNDT token trong constructor khi thiết lập hạn mức mặc định.
+// Imports the IERC20Metadata interface from the OpenZeppelin library.
+// This interface extends IERC20 to include functions for reading metadata such as `name()`, `symbol()`, and `decimals()`.
+// We need it to access the `decimals()` function of the VNDT token in the constructor when setting default limits.
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-// Import contract Ownable từ thư viện OpenZeppelin.
-// Contract này cung cấp một cơ chế đơn giản để quản lý quyền sở hữu (owner).
-// Bất kỳ contract nào kế thừa Ownable sẽ có một địa chỉ 'owner' (chủ sở hữu)
-// và một modifier `onlyOwner` để giới hạn quyền truy cập vào các hàm nhạy cảm, chỉ cho phép chủ sở hữu gọi.
+// Imports the Ownable contract from the OpenZeppelin library.
+// This contract provides a simple access control mechanism, where there is an 'owner'
+// address that has exclusive rights to certain functions (e.g., `mint`, `burn`).
 
 import "@openzeppelin/contracts/utils/Pausable.sol";
-// Import thư viện Pausable từ OpenZeppelin.
-// Contract này cung cấp các chức năng để tạm dừng (pause) và khởi động lại (unpause) hợp đồng.
-// Nó bao gồm các modifier như `whenNotPaused` (chỉ chạy khi không tạm dừng) và `whenPaused` (chỉ chạy khi tạm dừng).
+// Imports the Pausable library from OpenZeppelin.
+// This contract provides functionalities to pause and unpause the contract's operations.
+// It includes modifiers like `whenNotPaused` (only runs when not paused) and `whenPaused` (only runs when paused).
 
 import "@openzeppelin/contracts/utils/Strings.sol";
-// Import thư viện Strings từ OpenZeppelin.
-// Thư viện này cung cấp các tiện ích xử lý chuỗi, bao gồm hàm `toHexString()`
-// để chuyển đổi địa chỉ thành chuỗi hex, phục vụ việc nối chuỗi trong mô tả giao dịch.
+// Imports the Strings library from OpenZeppelin.
+// This library provides utility functions for string manipulation, including `toHexString()`
+// to convert an address to a hexadecimal string, used for concatenating strings in transaction descriptions.
 
-// Không cần import SafeMath.sol vì Solidity 0.8.0+ đã tích hợp sẵn cơ chế kiểm tra tràn số (overflow)
-// và thiếu số (underflow) cho các phép toán số học mặc định trên kiểu số nguyên (uint).
-// Điều này làm cho các phép toán `+`, `-`, `*`, `/` trên `uint256` an toàn hơn mà không cần thư viện bổ sung.
+// SafeMath.sol is not imported because Solidity 0.8.0+ has built-in overflow and underflow checks
+// for arithmetic operations on integer types by default.
+// This makes `+`, `-`, `*`, `/` operations on `uint256` safer without an additional library.
 
 contract DeBank is Ownable, Pausable {
-    // Khai báo contract DeBank.
-    // `is Ownable`: contract này kế thừa tất cả các hàm, biến và modifier của contract Ownable,
-    // cung cấp cơ chế chủ sở hữu (owner) và kiểm soát quyền truy cập.
-    // `is Pausable`: contract này kế thừa tất cả các hàm, biến và modifier của contract Pausable,
-    // cung cấp khả năng tạm dừng và khởi động lại hoạt động của hợp đồng.
+    // Defines the DeBank contract.
+    // `is Ownable`: This contract inherits all functions, variables, and modifiers from the Ownable contract,
+    // providing an ownership mechanism and access control.
+    // `is Pausable`: This contract inherits all functions, variables, and modifiers from the Pausable contract,
+    // enabling the ability to pause and unpause contract operations.
 
-    // Không cần `using SafeMath for uint256;` vì SafeMath không còn được import và các phép toán cơ bản đã an toàn.
+    // `using SafeMath for uint256;` is not needed as SafeMath is no longer imported and basic arithmetic operations are safe.
 
-    // --- Biến Trạng Thái (State Variables) ---
-    // Các biến trạng thái được lưu trữ vĩnh viễn trên blockchain.
-    // Giá trị của chúng sẽ được duy trì giữa các giao dịch.
+    // --- State Variables ---
+    // State variables are permanently stored on the blockchain.
+    // Their values persist across transactions.
 
     address public bankOwner;
-    // Địa chỉ của chủ sở hữu hợp đồng DeBank.
-    // Chủ sở hữu này là người có quyền thực hiện các chức năng quản trị.
-    // `public` tạo ra một hàm getter tự động `bankOwner()` để đọc giá trị này từ bên ngoài contract.
+    // The address of the DeBank contract's owner.
+    // This owner has the privilege to execute administrative functions.
+    // `public` automatically creates a getter function `bankOwner()` to read this value from outside the contract.
 
     IERC20Metadata public vndToken;
-    // Một instance của giao diện IERC20Metadata, đại diện cho smart contract VNDT token đã được triển khai.
-    // Biến này cho phép hợp đồng DeBank tương tác với hợp đồng VNDT (ví dụ: gọi `transferFrom`, `transfer`).
+    // An instance of the IERC20Metadata interface, representing the deployed VNDT token smart contract.
+    // This variable allows the DeBank contract to interact with the VNDT token contract
+    // (e.g., calling `transferFrom`, `transfer`).
 
     mapping(address => bool) public isAccount;
-    // Một mapping (bản đồ) để kiểm tra xem một địa chỉ đã có tài khoản trong hệ thống DeBank chưa.
-    // Key: địa chỉ (address). Value: boolean (true nếu tài khoản tồn tại, false nếu chưa).
-    // Một tài khoản được coi là "tồn tại" trong DeBank khi nó thực hiện giao dịch `deposit` đầu tiên.
+    // A mapping (a key-value store) to check if an address has an account within the DeBank system.
+    // Key: address. Value: boolean (true if the account exists, false otherwise).
+    // An account is considered "existing" in DeBank when it performs its first `deposit` transaction.
 
     mapping(address => uint256) public balances;
-    // Một mapping lưu trữ số dư VNDT của mỗi tài khoản trong hợp đồng DeBank.
-    // Key: địa chỉ người dùng (address). Value: số dư VNDT (uint256, tính bằng đơn vị nhỏ nhất của token).
-    // LƯU Ý QUAN TRỌNG: Số dư này là số tiền mà hợp đồng DeBank đang giữ THAY MẶT cho người dùng,
-    // chứ không phải số dư trực tiếp trong ví cá nhân của họ (ví Metamask).
+    // A mapping storing the VNDT balance of each account within the DeBank contract.
+    // Key: user's address. Value: VNDT balance (uint256, in the smallest token units).
+    // IMPORTANT NOTE: This balance is the amount of VNDT that the DeBank contract holds ON BEHALF of the user,
+    // not the balance directly in their personal wallet (e.g., Metamask).
 
     uint256 public totalDeposits;
-    // Tổng số lượng VNDT hiện đang được giữ bởi hợp đồng DeBank.
-    // Đây là tổng của tất cả `balances` của người dùng.
+    // The total amount of VNDT currently held by the DeBank contract.
+    // This is the sum of all user `balances`.
 
     uint256 public dailyTransferLimit;
-    // Hạn mức chuyển khoản tối đa mà mỗi người dùng có thể thực hiện trong một ngày (tính bằng đơn vị nhỏ nhất của VNDT).
-    // Giá trị này có thể được cập nhật bởi `bankOwner`.
+    // The maximum transfer amount that each user can perform within a single day (in the smallest VNDT units).
+    // This value can be updated by the `bankOwner`.
 
     mapping(address => mapping(uint256 => uint256)) public dailyTransferredAmount;
-    // Một mapping lồng nhau để theo dõi tổng số tiền mà một người dùng đã chuyển trong một ngày cụ thể.
-    // Key ngoài cùng: địa chỉ người dùng (address).
-    // Key bên trong: timestamp của ngày hiện tại (uint256, được tính bằng `block.timestamp / 1 days`).
-    // Value: tổng số tiền đã chuyển trong ngày đó (uint256).
+    // A nested mapping to track the total amount a user has transferred on a specific day.
+    // Outer Key: user's address.
+    // Inner Key: timestamp of the current day (uint256, calculated as `block.timestamp / 1 days`).
+    // Value: the total amount transferred on that day (uint256).
 
     uint256 public transferFeeRate;
-    // Tỷ lệ phí chuyển khoản. Giá trị này được biểu thị bằng "basis points" (phần vạn).
-    // Ví dụ: 10000 basis points = 100%. Nếu `transferFeeRate = 10`, nghĩa là phí là 0.1% (10 / 10000 = 0.001).
-    // Có thể được cập nhật bởi `bankOwner`.
+    // The transfer fee rate. This value is expressed in "basis points" (one hundredths of a percent).
+    // Example: 10000 basis points = 100%. If `transferFeeRate = 10`, the fee is 0.1% (10 / 10000 = 0.001).
+    // Can be updated by the `bankOwner`.
 
     address public feeReceiver;
-    // Địa chỉ ví sẽ nhận các khoản phí giao dịch. Thường là địa chỉ của ngân hàng (owner).
-    // Có thể được cập nhật bởi `bankOwner`.
+    // The address that will receive transaction fees. Typically the bank owner's address.
+    // Can be updated by the `bankOwner`.
 
-    // Cấu trúc (struct) để định nghĩa chi tiết một bản ghi giao dịch.
-    // Các struct này được lưu trữ trong mapping `accountTransactions`.
+    // A structure (struct) to define the details of a transaction record.
+    // These structs are stored in the `accountTransactions` mapping.
     struct Transaction {
-        uint256 id;                 // ID duy nhất cho mỗi giao dịch, tự động tăng
-        address from;               // Địa chỉ người gửi của giao dịch
-        address to;                 // Địa chỉ người nhận của giao dịch
-        uint256 amount;             // Số tiền/token của giao dịch (trước khi trừ phí cho người gửi, sau khi trừ phí cho người nhận)
-        uint256 timestamp;          // Thời điểm giao dịch được thực hiện (Unix timestamp)
-        string txType;              // Loại giao dịch: "Deposit", "Withdraw", "TransferOut", "TransferIn", "SavingsDeposit", etc.
-        string description;         // Mô tả ngắn gọn về giao dịch, bao gồm địa chỉ rút gọn để dễ đọc
+        uint256 id;                 // Unique ID for each transaction, automatically increments.
+        address from;               // The sender's address for the transaction.
+        address to;                 // The recipient's address for the transaction.
+        uint256 amount;             // The amount/token of the transaction (before fee deduction for sender, after fee for recipient).
+        uint256 timestamp;          // The time the transaction occurred (Unix timestamp).
+        string txType;              // Type of transaction: "Deposit", "Withdraw", "TransferOut", "TransferIn", "SavingsDeposit", etc.
+        string description;         // A brief description of the transaction, including a shortened address for readability.
     }
 
     mapping(address => Transaction[]) public accountTransactions;
-    // Một mapping để lưu trữ lịch sử giao dịch cho mỗi tài khoản.
-    // Key: địa chỉ người dùng (address). Value: một mảng (array) các struct Transaction.
+    // A mapping to store the transaction history for each account.
+    // Key: user's address. Value: an array of Transaction structs.
 
     uint256 public nextTransactionId;
-    // Một bộ đếm được sử dụng để tạo các ID duy nhất cho mỗi giao dịch mới.
-    // Sẽ tăng lên sau mỗi lần có giao dịch được ghi.
+    // A counter used to generate unique IDs for each new transaction.
+    // Increments after each transaction is recorded.
 
-    // --- Các thành phần cho chức năng Tiết kiệm (Advanced) ---
-    // Cấu trúc để lưu trữ thông tin của mỗi khoản tiết kiệm của người dùng.
+    // --- Components for Savings Functionality (Advanced) ---
+    // Structure to store information about each user's savings account.
     struct SavingsAccount {
-        uint256 amount;             // Số tiền gốc gửi tiết kiệm
-        uint256 startTime;          // Thời điểm bắt đầu gửi tiết kiệm (Unix timestamp của block khi giao dịch được xác nhận)
-        uint256 durationMonths;     // Kỳ hạn gửi tiết kiệm tính bằng tháng (ví dụ: 3, 6, 12 tháng)
-        uint256 interestRate;       // Lãi suất hàng năm (tính bằng basis points) áp dụng cho khoản tiết kiệm này tại thời điểm gửi
-        bool isActive;              // Trạng thái của tài khoản tiết kiệm (true: đang hoạt động/chưa rút, false: đã rút)
+        uint256 amount;             // The principal amount deposited for savings.
+        uint256 startTime;          // The timestamp of the block when the savings deposit began.
+        uint256 durationMonths;     // The duration of the savings term in months (e.g., 3, 6, 12 months).
+        uint256 interestRate;       // The annual interest rate (in basis points) applied to this savings account at the time of deposit.
+        bool isActive;              // The status of the savings account (true: active/not yet withdrawn, false: withdrawn).
     }
-    mapping(address => SavingsAccount[]) public userSavingsAccounts; // Mapping lưu trữ các khoản tiết kiệm của mỗi người dùng
-    // Key: địa chỉ người dùng (address). Value: một mảng (array) các struct SavingsAccount.
+    mapping(address => SavingsAccount[]) public userSavingsAccounts; // Mapping storing each user's savings accounts.
+    // Key: user's address. Value: an array of SavingsAccount structs.
 
-    uint256 public savingsInterestRate; // Lãi suất tiết kiệm toàn cầu (hàng năm, tính bằng basis points) cho các khoản gửi mới
-    // Giá trị này có thể được cập nhật bởi `bankOwner`.
+    uint256 public savingsInterestRate; // The global annual interest rate (in basis points) for new savings deposits.
+    // This value can be updated by the `bankOwner`.
 
 
-    // --- Sự kiện (Events) ---
-    // Các sự kiện là cách để smart contract "thông báo" về những gì đã xảy ra trên blockchain.
-    // Chúng được ghi vào blockchain logs và có thể được các ứng dụng frontend lắng nghe để cập nhật giao diện trong thời gian thực.
-    // Tham số `indexed` giúp tối ưu việc tìm kiếm và lọc các sự kiện trong log.
+    // --- Events ---
+    // Events are how smart contracts "announce" what has happened on the blockchain.
+    // They are recorded in blockchain logs and can be listened to by frontend applications to update the UI in real-time.
+    // The `indexed` keyword helps optimize searching and filtering events in logs.
 
     event AccountOpened(address indexed account);
-    // Phát ra khi một tài khoản mới được mở trong DeBank (lần đầu tiên có tương tác, ví dụ deposit).
+    // Emitted when a new account is opened in DeBank (first interaction, e.g., deposit).
 
     event Deposited(address indexed account, uint256 amount, uint256 balance);
-    // Phát ra khi người dùng gửi VNDT vào DeBank.
-    // `account`: địa chỉ của người gửi. `amount`: số tiền gửi. `balance`: số dư mới của tài khoản.
+    // Emitted when a user deposits VNDT into DeBank.
+    // `account`: the sender's address. `amount`: the deposited amount. `balance`: the new account balance.
 
     event Withdrawn(address indexed account, uint256 amount, uint256 balance);
-    // Phát ra khi người dùng rút VNDT từ DeBank.
-    // `account`: địa chỉ của người rút. `amount`: số tiền rút. `balance`: số dư mới của tài khoản.
+    // Emitted when a user withdraws VNDT from DeBank.
+    // `account`: the withdrawer's address. `amount`: the withdrawn amount. `balance`: the new account balance.
 
     event Transferred(address indexed from, address indexed to, uint256 amount, uint256 fee);
-    // Phát ra khi VNDT được chuyển giữa các tài khoản trong DeBank.
-    // `from`: địa chỉ người gửi. `to`: địa chỉ người nhận. `amount`: số tiền chuyển. `fee`: phí đã thu.
+    // Emitted when VNDT is transferred between accounts within DeBank.
+    // `from`: sender's address. `to`: recipient's address. `amount`: transferred amount. `fee`: collected fee.
 
     event DailyLimitUpdated(uint256 newLimit);
-    // Phát ra khi hạn mức chuyển khoản hàng ngày được cập nhật bởi owner.
+    // Emitted when the daily transfer limit is updated by the owner.
 
     event FeeRateUpdated(uint256 newRate);
-    // Phát ra khi tỷ lệ phí chuyển khoản được cập nhật bởi owner.
+    // Emitted when the transfer fee rate is updated by the owner.
 
     event FeeReceiverUpdated(address indexed newReceiver);
-    // Phát ra khi địa chỉ nhận phí được cập nhật bởi owner.
+    // Emitted when the fee recipient address is updated by the owner.
 
     event SavingsDeposited(address indexed account, uint256 amount, uint256 durationMonths);
-    // Phát ra khi người dùng gửi tiền vào tiết kiệm.
-    // `account`: địa chỉ người gửi. `amount`: số tiền gửi. `durationMonths`: kỳ hạn gửi.
+    // Emitted when a user deposits funds into a savings account.
+    // `account`: depositor's address. `amount`: deposited amount. `durationMonths`: savings term.
 
     event SavingsWithdrawn(address indexed account, uint256 amount, uint256 interestEarned);
-    // Phát ra khi người dùng rút tiền từ tiết kiệm, bao gồm cả lãi suất kiếm được.
+    // Emitted when a user withdraws funds from a savings account, including earned interest.
 
     // --- Constructor ---
-    // Hàm này được thực thi DUY NHẤT MỘT LẦN khi contract được triển khai (deploy) lên blockchain.
-    // Nó dùng để khởi tạo các biến trạng thái ban đầu của contract.
+    // This function is executed ONLY ONCE when the contract is deployed to the blockchain.
+    // It is used to initialize the contract's initial state variables.
     constructor(address _vndTokenAddress) Ownable(msg.sender) Pausable() {
-        // `Ownable(msg.sender)`: Gọi constructor của contract Ownable để gán địa chỉ của người triển khai contract
-        // (`msg.sender`) làm chủ sở hữu (owner) của contract DeBank này.
-        // `Pausable()`: Gọi constructor của contract Pausable. (Không nhận đối số trong OZ v5.x)
+        // `Ownable(msg.sender)`: Calls the Ownable contract's constructor to set the contract deployer's address
+        // (`msg.sender`) as the owner of this DeBank contract.
+        // `Pausable()`: Calls the Pausable contract's constructor. (It does not take an argument in OZ v5.x).
         
         bankOwner = msg.sender;
-        // Gán biến `bankOwner` bằng địa chỉ của người đã triển khai contract.
+        // Assigns the `bankOwner` variable to the address of the contract deployer.
 
         vndToken = IERC20Metadata(_vndTokenAddress);
-        // Khởi tạo biến `vndToken` bằng cách ép kiểu địa chỉ `_vndTokenAddress`
-        // thành một đối tượng IERC20Metadata. Điều này cho phép hợp đồng DeBank gọi các hàm ERC20
-        // trên hợp đồng VNDT token.
+        // Initializes the `vndToken` variable by casting the `_vndTokenAddress`
+        // to an IERC20Metadata object. This allows the DeBank contract to call ERC20 functions
+        // on the VNDT token contract.
 
-        // Thiết lập các giá trị mặc định ban đầu cho các biến:
+        // Sets the initial default values for state variables:
         dailyTransferLimit = 1_000_000_000 * (10 ** vndToken.decimals());
-        // Thiết lập hạn mức chuyển khoản hàng ngày mặc định là 1 tỷ VNDT.
-        // `10 ** vndToken.decimals()` để chuyển đổi từ đơn vị thực tế (1 tỷ VNDT)
-        // sang đơn vị nhỏ nhất mà token (VNDT) sử dụng (ví dụ: 10^18 nếu decimals là 18).
+        // Sets the default daily transfer limit to 1 billion VNDT.
+        // `10 ** vndToken.decimals()` converts the human-readable amount (1 billion VNDT)
+        // to the smallest unit used by the token (e.g., 10^18 if decimals is 18).
 
         transferFeeRate = 10;
-        // Thiết lập tỷ lệ phí chuyển khoản mặc định là 0.1% (10 basis points).
+        // Sets the default transfer fee rate to 0.1% (10 basis points).
 
         feeReceiver = msg.sender;
-        // Địa chỉ nhận phí mặc định là địa chỉ của chủ sở hữu hợp đồng DeBank.
+        // The default fee recipient address is the address of the DeBank contract's owner.
 
         nextTransactionId = 1;
-        // Khởi tạo ID giao dịch tiếp theo là 1.
+        // Initializes the next transaction ID to 1.
 
-        savingsInterestRate = 500; // Mặc định 5% lãi suất hàng năm cho tiết kiệm (500 basis points)
+        savingsInterestRate = 500; // Default annual interest rate for savings is 5% (500 basis points).
     }
 
-    // --- Bộ Biến Đổi (Modifiers) ---
-    // Modifiers là các hàm được gắn vào các hàm khác để thêm các điều kiện kiểm tra trước khi
-    // hàm chính được thực thi. Nếu điều kiện không được thỏa mãn, giao dịch sẽ bị revert.
-    // Điều này giúp tái sử dụng mã và tăng tính bảo mật cho hợp đồng.
+    // --- Modifiers ---
+    // Modifiers are functions attached to other functions to add conditional checks before
+    // the main function's code is executed. If the condition is not met, the transaction will revert.
+    // This helps in code reuse and enhances contract security.
 
     modifier onlyBankOwner() {
-        // Modifier này đảm bảo rằng chỉ `bankOwner` (người triển khai contract) mới có thể gọi hàm.
+        // This modifier ensures that only the `bankOwner` (the contract deployer) can call the function.
         require(msg.sender == bankOwner, "DeBank: Only bank owner can call this function");
-        // `require`: kiểm tra điều kiện. Nếu điều kiện sai, giao dịch sẽ bị revert với thông báo lỗi.
-        _; // Dấu gạch dưới (underscore) là nơi mã của hàm chính sẽ được chèn vào và thực thi.
+        // `require`: checks a condition. If the condition is false, the transaction will revert with an error message.
+        _; // The underscore is where the main function's code will be inserted and executed.
     }
 
     modifier accountExists(address _account) {
-        // Modifier này kiểm tra xem tài khoản `_account` có tồn tại (đã từng tương tác/deposit) trong hệ thống DeBank không.
+        // This modifier checks if the `_account` exists (has interacted/deposited before) in the DeBank system.
         require(isAccount[_account], "DeBank: Account does not exist");
         _;
     }
 
     modifier sufficientBalance(uint256 _amount) {
-        // Modifier này kiểm tra xem người gọi hàm (`msg.sender`) có đủ số dư (`balances[msg.sender]`)
-        // để thực hiện giao dịch với số tiền `_amount` hay không.
-        // Trong Solidity 0.8.0+, phép trừ sẽ tự động revert nếu kết quả âm (underflow),
-        // nên việc kiểm tra `balances[msg.sender] >= _amount` là an toàn và cần thiết.
+        // This modifier checks if the function caller (`msg.sender`) has sufficient balance (`balances[msg.sender]`)
+        // to perform the transaction with the given `_amount`.
+        // In Solidity 0.8.0+, subtraction will automatically revert if the result is negative (underflow),
+        // so checking `balances[msg.sender] >= _amount` is safe and necessary.
         require(balances[msg.sender] >= _amount, "DeBank: Insufficient balance");
         _;
     }
 
     modifier notZeroAddress(address _addr) {
-        // Modifier này đảm bảo rằng địa chỉ `_addr` không phải là địa chỉ "zero address" (0x0).
-        // Địa chỉ 0x0 là một địa chỉ đặc biệt thường dùng làm giá trị mặc định hoặc địa chỉ đốt token.
-        // Gửi tiền đến 0x0 coi như là đốt bỏ tiền.
+        // This modifier ensures that the `_addr` is not the "zero address" (0x0).
+        // The zero address is a special address often used as a default value or a burn address.
+        // Sending funds to 0x0 is equivalent to burning them.
         require(_addr != address(0), "DeBank: Zero address not allowed");
         _;
     }
 
     modifier checkDailyLimit(address _sender, uint256 _amount) {
-        uint256 today = block.timestamp / 1 days; // Tính toán timestamp của ngày hiện tại (làm tròn xuống ngày).
-        // `1 days` là một hằng số toàn cục tương đương 24 * 60 * 60 giây.
-        // Phép chia số nguyên (integer division) sẽ loại bỏ phần giờ/phút/giây, chỉ giữ lại phần ngày.
+        // This modifier checks if adding `_amount` to the `_sender`'s total transferred amount for the day
+        // exceeds the `dailyTransferLimit`.
+        uint256 today = block.timestamp / 1 days; // Calculates the timestamp of the current day (rounded down to the day).
+        // `1 days` is a global constant equivalent to 24 * 60 * 60 seconds.
+        // Integer division truncates the hours/minutes/seconds part, keeping only the day part.
         require(dailyTransferredAmount[_sender][today] + _amount <= dailyTransferLimit, "DeBank: Daily transfer limit exceeded");
         _;
     }
 
-    // --- Hàm Người Dùng (User Functions) ---
-    // Các hàm mà người dùng thông thường có thể gọi để tương tác với ngân hàng.
+    // --- User Functions ---
+    // These are functions that regular users can call to interact with the bank.
 
     /**
-     * @dev Cho phép người dùng gửi VNDT vào tài khoản DeBank của họ.
-     * Người dùng PHẢI gọi hàm `approve()` trên contract VNDT trước đó để cấp quyền cho contract DeBank
-     * được phép di chuyển một lượng VNDT từ ví của họ. Nếu không có `approve` hoặc `approve` không đủ,
-     * giao dịch `transferFrom` sẽ thất bại.
-     * @param _amount Số lượng VNDT muốn gửi (tính bằng đơn vị nhỏ nhất của token).
+     * @dev Allows a user to deposit VNDT into their DeBank account.
+     * The user MUST have called the `approve()` function on the VNDT contract beforehand
+     * to grant the DeBank contract permission to move a specific amount of VNDT from their wallet.
+     * If no `approve` call was made or the approved amount is insufficient, the `transferFrom`
+     * transaction will fail.
+     * @param _amount The amount of VNDT to deposit (in the token's smallest units).
      */
     function deposit(uint256 _amount) public notZeroAddress(msg.sender) whenNotPaused {
-        // `public`: hàm có thể được gọi từ bất kỳ đâu.
-        // `notZeroAddress(msg.sender)`: sử dụng modifier để đảm bảo người gọi không phải là địa chỉ 0x0.
-        // `whenNotPaused`: modifier từ Pausable, đảm bảo hàm chỉ chạy khi hợp đồng không bị tạm dừng.
+        // `public`: the function can be called from anywhere.
+        // `notZeroAddress(msg.sender)`: uses a modifier to ensure the caller is not the zero address.
+        // `whenNotPaused`: modifier from Pausable, ensures the function only runs when the contract is not paused.
         require(_amount > 0, "DeBank: Deposit amount must be greater than zero");
-        // Đảm bảo số tiền gửi phải lớn hơn 0 để tránh các giao dịch vô nghĩa.
+        // Ensures the deposit amount is greater than 0 to prevent meaningless transactions.
 
-        // Nếu đây là lần đầu tiên tài khoản này tương tác với DeBank (chưa có trong `isAccount`),
-        // đánh dấu là tài khoản tồn tại và phát ra sự kiện `AccountOpened`.
+        // If this is the first time this account interacts with DeBank (not yet in `isAccount`),
+        // marks it as an existing account and emits an `AccountOpened` event.
         if (!isAccount[msg.sender]) {
             isAccount[msg.sender] = true;
-            emit AccountOpened(msg.sender); // Phát ra sự kiện báo hiệu tài khoản mới được mở.
+            emit AccountOpened(msg.sender); // Emits an event signaling a new account has been opened.
         }
 
-        // Chuyển VNDT từ ví của người dùng (msg.sender) sang contract DeBank (address(this)).
-        // Lệnh này CHỈ THÀNH CÔNG nếu người dùng đã gọi `vndToken.approve(DeBankContractAddress, _amount)` trước đó.
+        // Transfers VNDT from the user's wallet (msg.sender) to the DeBank contract (address(this)).
+        // This command ONLY SUCCEEDS if the user has previously called `vndToken.approve(DeBankContractAddress, _amount)`.
         require(vndToken.transferFrom(msg.sender, address(this), _amount), "DeBank: VNDT transferFrom failed. Did you approve enough?");
-        // `address(this)`: là địa chỉ của chính contract DeBank.
+        // `address(this)`: refers to the DeBank contract's own address.
 
-        // Cập nhật số dư VNDT của người dùng trong contract DeBank.
-        balances[msg.sender] = balances[msg.sender] + _amount; // Sử dụng toán tử cộng native
-        // Cập nhật tổng số tiền gửi vào DeBank mà contract đang giữ.
-        totalDeposits = totalDeposits + _amount; // Sử dụng toán tử cộng native
+        // Updates the user's VNDT balance within the DeBank contract.
+        balances[msg.sender] = balances[msg.sender] + _amount; // Uses native addition.
+        // Updates the total amount of VNDT held by the DeBank contract.
+        totalDeposits = totalDeposits + _amount; // Uses native addition.
 
-        // Ghi lại giao dịch vào lịch sử của người gửi.
+        // Records the transaction in the sender's history.
         accountTransactions[msg.sender].push(
             Transaction({
-                id: nextTransactionId++, // Sử dụng và tăng ID giao dịch duy nhất
+                id: nextTransactionId++, // Uses and increments a unique transaction ID.
                 from: msg.sender,
-                to: address(this), // Địa chỉ contract DeBank là người nhận trong giao dịch gửi tiền
+                to: address(this), // The DeBank contract's address is the recipient in a deposit transaction.
                 amount: _amount,
-                timestamp: block.timestamp, // Thời điểm giao dịch (Unix timestamp)
-                txType: "Deposit", // Loại giao dịch: "Deposit"
-                description: "Deposit to DeBank account" // Mô tả ngắn gọn
+                timestamp: block.timestamp, // The time of the transaction (Unix timestamp).
+                txType: "Deposit", // Transaction type: "Deposit".
+                description: "Deposit to DeBank account" // Brief description.
             })
         );
         emit Deposited(msg.sender, _amount, balances[msg.sender]);
-        // Phát ra sự kiện `Deposited` để frontend có thể lắng nghe và cập nhật giao diện.
+        // Emits the `Deposited` event for the frontend to listen to and update the UI.
     }
 
     /**
-     * @dev Cho phép người dùng rút VNDT từ tài khoản DeBank của họ về ví cá nhân.
-     * @param _amount Số lượng VNDT muốn rút (tính bằng đơn vị nhỏ nhất của token).
+     * @dev Allows a user to withdraw VNDT from their DeBank account to their personal wallet.
+     * @param _amount The amount of VNDT to withdraw (in the token's smallest units).
      */
     function withdraw(uint256 _amount) public accountExists(msg.sender) sufficientBalance(_amount) whenNotPaused {
-        // `accountExists(msg.sender)`: Đảm bảo người gọi có tài khoản trong DeBank.
-        // `sufficientBalance(_amount)`: Đảm bảo người gọi có đủ số dư trong DeBank để rút.
-        // `whenNotPaused`: đảm bảo hàm chỉ chạy khi hợp đồng không bị tạm dừng.
+        // `accountExists(msg.sender)`: Ensures the caller has an account in DeBank.
+        // `sufficientBalance(_amount)`: Ensures the caller has enough balance in DeBank to withdraw.
+        // `whenNotPaused`: Ensures the function only runs when the contract is not paused.
         require(_amount > 0, "DeBank: Withdraw amount must be greater than zero");
-        // Đảm bảo số tiền rút lớn hơn 0.
+        // Ensures the withdrawal amount is greater than 0.
 
-        // Giảm số dư của người dùng trong contract DeBank.
-        balances[msg.sender] = balances[msg.sender] - _amount; // Sử dụng toán tử trừ native
-        // `totalDeposits` không cần giảm ở đây vì tiền vẫn nằm trong hợp đồng, chỉ là thay đổi chủ sở hữu.
+        // Decreases the user's balance within the DeBank contract.
+        balances[msg.sender] = balances[msg.sender] - _amount; // Uses native subtraction.
 
-        // Chuyển VNDT từ contract DeBank về ví cá nhân của người dùng.
+        // Transfers VNDT from the DeBank contract to the user's personal wallet.
         require(vndToken.transfer(msg.sender, _amount), "DeBank: VNDT transfer failed during withdrawal");
 
-        // Giảm tổng số tiền mà contract DeBank đang giữ (vì tiền đã ra khỏi hợp đồng).
-        totalDeposits = totalDeposits - _amount; // Sử dụng toán tử trừ native
+        // Decreases the total amount of VNDT held by the DeBank contract (as funds leave the contract).
+        totalDeposits = totalDeposits - _amount; // Uses native subtraction.
 
-        // Ghi lại giao dịch vào lịch sử của người rút.
+        // Records the transaction in the withdrawer's history.
         accountTransactions[msg.sender].push(
             Transaction({
                 id: nextTransactionId++,
-                from: address(this), // Contract DeBank là người gửi trong giao dịch rút tiền
+                from: address(this), // The DeBank contract's address is the sender in a withdrawal transaction.
                 to: msg.sender,
                 amount: _amount,
                 timestamp: block.timestamp,
@@ -328,65 +330,487 @@ contract DeBank is Ownable, Pausable {
             })
         );
         emit Withdrawn(msg.sender, _amount, balances[msg.sender]);
-        // Phát ra sự kiện `Withdrawn` để frontend lắng nghe.
+        // Emits the `Withdrawn` event for the frontend to listen to.
     }
 
     /**
-     * @dev Cho phép người dùng chuyển VNDT đến một tài khoản khác trong hệ thống DeBank.
-     * Áp dụng hạn mức chuyển khoản hàng ngày và tính phí giao dịch.
-     * @param _to Địa chỉ của người nhận.
-     * @param _amount Số lượng VNDT muốn chuyển (tính bằng đơn vị nhỏ nhất của token).
+     * @dev Allows a user to transfer VNDT to another account within the DeBank system.
+     * Applies a daily transfer limit and calculates a transaction fee.
+     * @param _to The recipient's address.
+     * @param _amount The amount of VNDT to transfer (in the token's smallest units).
      */
     function transfer(address _to, uint256 _amount)
         public
-        accountExists(msg.sender) // Đảm bảo người gửi có tài khoản trong DeBank
-        notZeroAddress(_to)        // Đảm bảo địa chỉ người nhận không phải là 0x0
-        sufficientBalance(_amount) // Đảm bảo người gửi có đủ số dư trong DeBank
-        checkDailyLimit(msg.sender, _amount) // Kiểm tra hạn mức chuyển khoản hàng ngày
-        whenNotPaused // đảm bảo hàm chỉ chạy khi hợp đồng không bị tạm dừng.
+        accountExists(msg.sender) // Ensures the sender has an account in DeBank.
+        notZeroAddress(_to)        // Ensures the recipient's address is not the zero address.
+        sufficientBalance(_amount) // Ensures the sender has enough balance in DeBank.
+        checkDailyLimit(msg.sender, _amount) // Checks the daily transfer limit.
+        whenNotPaused // Ensures the function only runs when the contract is not paused.
     {
         require(_amount > 0, "DeBank: Transfer amount must be greater than zero");
         require(msg.sender != _to, "DeBank: Cannot transfer to yourself");
-        // Đảm bảo người gửi và người nhận không phải là cùng một địa chỉ để tránh các giao dịch không cần thiết.
+        // Ensures sender and recipient are not the same address to prevent unnecessary transactions.
 
-        // Tính toán phí giao dịch.
-        // Phí = (số tiền * tỷ lệ phí) / 10000 (vì tỷ lệ phí là basis points)
-        uint256 fee = _amount * transferFeeRate / 10000; // Sử dụng toán tử nhân và chia native
-        // Số tiền thực tế người nhận sẽ nhận được sau khi trừ phí.
-        uint256 amountAfterFee = _amount - fee; // Sử dụng toán tử trừ native
+        // Calculates the transaction fee.
+        // Fee = (amount * fee_rate) / 10000 (since fee_rate is in basis points).
+        uint256 fee = _amount * transferFeeRate / 10000; // Uses native multiplication and division.
+        // The actual amount the recipient will receive after deducting the fee.
+        uint256 amountAfterFee = _amount - fee; // Uses native subtraction.
 
-        // Giảm số dư của người gửi bằng TỔNG số tiền (bao gồm cả phí) trong contract DeBank.
-        balances[msg.sender] = balances[msg.sender] - _amount; // Sử dụng toán tử trừ native
+        // Decreases the sender's balance by the TOTAL amount (including fee) within the DeBank contract.
+        balances[msg.sender] = balances[msg.sender] - _amount; // Uses native subtraction.
 
-        // Nếu người nhận chưa có tài khoản trong DeBank, tạo tài khoản mới cho họ.
+        // If the recipient does not yet have an account in DeBank, creates a new account for them.
         if (!isAccount[_to]) {
             isAccount[_to] = true;
-            emit AccountOpened(_to); // Phát ra sự kiện báo hiệu tài khoản mới được mở.
+            emit AccountOpened(_to); // Emits an event signaling a new account has been opened.
         }
-        // Tăng số dư của người nhận bằng số tiền sau khi trừ phí.
-        balances[_to] = balances[_to] + amountAfterFee; // Sử dụng toán tử cộng native
+        // Increases the recipient's balance by the amount received after fee deduction.
+        balances[_to] = balances[_to] + amountAfterFee; // Uses native addition.
 
-        // Chuyển phí giao dịch đến địa chỉ `feeReceiver`.
+        // Transfers the transaction fee to the `feeReceiver` address.
         if (fee > 0) {
-            // Chỉ thực hiện chuyển phí nếu phí > 0.
-            // `vndToken.transfer` là một hàm gửi token từ hợp đồng DeBank đến địa chỉ nhận phí.
+            // Only transfers the fee if it's greater than 0.
+            // `vndToken.transfer` is a function that sends tokens from the DeBank contract to the fee recipient address.
             require(vndToken.transfer(feeReceiver, fee), "DeBank: Failed to transfer fee to receiver");
         }
 
-        // Cập nhật tổng số tiền đã chuyển trong ngày của người gửi để áp dụng hạn mức.
-        uint256 today = block.timestamp / 1 days; // Lấy timestamp của ngày hiện tại
-        dailyTransferredAmount[msg.sender][today] = dailyTransferredAmount[msg.sender][today] + _amount; // Cộng dồn số tiền đã chuyển
+        // Updates the sender's total transferred amount for the current day to enforce the daily limit.
+        uint256 today = block.timestamp / 1 days; // Gets the timestamp of the current day.
+        dailyTransferredAmount[msg.sender][today] = dailyTransferredAmount[msg.sender][today] + _amount; // Accumulates the transferred amount.
 
-        // Ghi lại giao dịch vào lịch sử của NGƯỜI GỬI.
+        // Records the transaction in the SENDER's history.
         accountTransactions[msg.sender].push(
             Transaction({
-                id: nextTransactionId++, // Sử dụng và tăng ID giao dịch duy nhất
+                id: nextTransactionId++, // Uses and increments a unique transaction ID.
                 from: msg.sender,
                 to: _to,
-                amount: _amount, // Ghi lại số tiền ban đầu (trước khi trừ phí) cho người gửi
+                amount: _amount, // Records the original amount (before fee) for the sender.
                 timestamp: block.timestamp,
                 txType: "TransferOut",
-                description: string.concat("Transfer to ", Strings.toHexString(_to)) // Nối chuỗi để có mô tả chi tiết, sử dụng Strings.toHexString()
+                description: string.concat("Transfer to ", Strings.toHexString(_to)) // Concatenates strings for a detailed description.
+            })
+        );
+        // Records the transaction in the RECIPIENT's history.
+        accountTransactions[_to].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: msg.sender,
+                to: _to,
+                amount: amountAfterFee, // Records the actual amount received for the recipient.
+                timestamp: block.timestamp,
+                txType: "TransferIn",
+                description: string.concat("Received from ", Strings.toHexString(msg.sender))
+            })
+        );
+        emit Transferred(msg.sender, _to, _amount, fee);
+        // Emits the `Transferred` event for the frontend to listen to.
+    }
+
+    /**
+     * @dev Returns the VNDT balance of a specific account within the DeBank system.
+     * @param _account The address of the account to check the balance for.
+     * @return The balance of that account (uint256).
+     */
+    function getBalance(address _account) public view returns (uint256) {
+        // `view`: This function does not modify the blockchain state; it only reads data.
+        // Therefore, calling a `view` function does not cost gas (when called externally).
+        // This function does not require `accountExists` so it can return 0 for non-existent accounts.
+        return balances[_account];
+    }
+
+    /**
+     * @dev Returns the entire transaction history for a specific account.
+     * This function requires the account to exist (have made at least one deposit).
+     * @param _account The address of the account.
+     * @return An array of Transaction structs representing the transaction history.
+     */
+    function getAccountTransactionHistory(address _account) public view accountExists(_account) returns (Transaction[] memory) {
+        // `memory`: Specifies that the returned array is a temporary copy in memory,
+        // not permanently stored in the contract's storage.
+        // This function requires the account to exist because querying history for a non-existent account is meaningless.
+        return accountTransactions[_account];
+    }
+
+    /**
+     * @dev Returns the total amount transferred by a user on the current day.
+     * @param _account The address of the account.
+     * @return The total amount transferred today.
+     */
+    function getDailyTransferredAmount(address _account) public view returns (uint256) {
+        uint256 today = block.timestamp / 1 days;
+        return dailyTransferredAmount[_account][today];
+    }
+
+    /**
+     * @dev Allows a user to deposit VNDT into a fixed-term savings account.
+     * The deposited amount will be locked within the contract and cannot be withdrawn until the term ends.
+     * @param _amount The amount of VNDT to deposit into savings (in the token's smallest units).
+     * @param _durationMonths The duration of the savings term in months (e.g., 3, 6, 12).
+     */
+    function depositSavings(uint256 _amount, uint256 _durationMonths) public accountExists(msg.sender) sufficientBalance( _amount) whenNotPaused {
+        require(_amount > 0, "DeBank: Savings deposit amount must be greater than zero");
+        require(_durationMonths > 0 && _durationMonths <= 60, "DeBank: Savings duration must be between 1 and 60 months"); // Limits the term to prevent overflow issues with large numbers.
+
+        // Decreases the user's main balance (funds are moved from `balances` to `userSavingsAccounts`).
+        // The balance in `balances` decreases, but `totalDeposits` does not change because the funds remain within the contract;
+        // only their management status changes (from transactional balance to savings balance).
+        balances[msg.sender] = balances[msg.sender] - _amount;
+
+        // Records the new savings account information in the user's `userSavingsAccounts` array.
+        userSavingsAccounts[msg.sender].push(
+            SavingsAccount({
+                amount: _amount,
+                startTime: block.timestamp, // The timestamp when interest calculation begins.
+                durationMonths: _durationMonths,
+                interestRate: savingsInterestRate, // Uses the current global interest rate.
+                isActive: true // Marks the savings account as active.
+            })
+        );
+
+        // Records the transaction in the sender's history.
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: msg.sender,
+                to: address(this), // Represents the internal savings account (funds remain within the contract).
+                amount: _amount,
+                timestamp: block.timestamp,
+                txType: "SavingsDeposit",
+                description: string.concat("Deposit to savings for ", Strings.toString(_durationMonths), " months")
+            })
+        );
+        emit SavingsDeposited(msg.sender, _amount, _durationMonths); // Emits the `SavingsDeposited` event.
+    }
+
+    /**
+     * @dev Allows a user to withdraw funds from a savings account after the term has ended.
+     * The principal amount and earned interest will be transferred back to the user's main balance.
+     * @param _index The index of the savings account within the user's `userSavingsAccounts` array.
+     */
+    function withdrawSavings(uint256 _index) public accountExists(msg.sender) whenNotPaused {
+        // Retrieves a reference to the specific savings account.
+        require(_index < userSavingsAccounts[msg.sender].length, "DeBank: Invalid savings account index"); // Checks if the index is valid.
+        SavingsAccount storage sAccount = userSavingsAccounts[msg.sender][_index];
+        
+        require(sAccount.isActive, "DeBank: Savings account is not active"); // Ensures the savings account is active.
+
+        // Calculates the end time of the savings term.
+        // Uses 30 days per month for simplicity; can use exact seconds in a month if needed.
+        uint256 endTime = sAccount.startTime + (sAccount.durationMonths * 30 days);
+        require(block.timestamp >= endTime, "DeBank: Savings period has not ended yet"); // Ensures the term has ended.
+
+        // Calculates the interest earned (simple annual interest, prorated by month).
+        // Interest = (amount * interest_rate / 10000) * (duration_months / 12)
+        // The final division by `/ 12` converts the annual interest rate to a monthly rate corresponding to the term.
+        uint256 interestEarned = (sAccount.amount * sAccount.interestRate / 10000) * sAccount.durationMonths / 12;
+        uint256 totalAmount = sAccount.amount + interestEarned; // Total amount = principal + interest.
+
+        // Transfers the total amount (principal + interest) back to the user's main balance.
+        balances[msg.sender] = balances[msg.sender] + totalAmount;
+        sAccount.isActive = false; // Marks the savings account as withdrawn.
+
+        // Records the savings withdrawal transaction in the history.
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: address(this), // Represents the DeBank contract (source of interest payment).
+                to: msg.sender,
+                amount: totalAmount,
+                timestamp: block.timestamp,
+                txType: "SavingsWithdrawal",
+                description: string.concat("Withdrawal from savings, interest earned: ", Strings.toString(interestEarned / (10 ** vndToken.decimals()))) // Displays earned interest.
+            })
+        );
+        emit SavingsWithdrawn(msg.sender, sAccount.amount, interestEarned); // Emits the `SavingsWithdrawn` event.
+    }
+
+
+    // --- Admin Functions ---
+    // These functions are protected by the `onlyBankOwner` modifier to ensure security and control.
+    // They also use modifiers from Pausable to ensure proper operation based on the paused state.
+
+    function pause() public onlyBankOwner whenNotPaused {
+        // Can only pause the contract if the caller is the bankOwner and the contract is not already paused.
+        _pause(); // Internal function from Pausable, performs the contract pausing.
+    }
+
+    function unpause() public onlyBankOwner whenPaused {
+        // Can only unpause the contract if the caller is the bankOwner and the contract is currently paused.
+        _unpause(); // Internal function from Pausable, performs the contract unpausing.
+    }
+
+    function setDailyTransferLimit(uint256 _newLimit) public onlyBankOwner {
+        require(_newLimit > 0, "DeBank: Daily limit must be greater than zero"); // The limit must be greater than 0.
+        dailyTransferLimit = _newLimit; // Updates the state variable.
+        emit DailyLimitUpdated(_newLimit); // Emits an event signaling the change.
+    }
+
+    function setFeeRate(uint256 _newRate) public onlyBankOwner {
+        require(_newRate <= 10000, "DeBank: Fee rate cannot exceed 100%"); // Ensures the fee rate does not exceed 100% (10000 basis points).
+        transferFeeRate = _newRate; // Updates the state variable.
+        emit FeeRateUpdated(_newRate); // Emits an event signaling the change.
+    }
+
+    function setFeeReceiver(address _newReceiver) public onlyBankOwner notZeroAddress(_newReceiver) {
+        feeReceiver = _newReceiver; // Updates the state variable.
+        emit FeeReceiverUpdated(_newReceiver); // Emits an event signaling the change.
+    }
+
+    function recoverVNDT(uint256 _amount) public onlyBankOwner {
+        // This function allows the bank owner to recover any VNDT accidentally sent directly
+        // to the DeBank contract address without going through the `deposit` function (e.g., user sent to wrong address).
+        // This is a safety mechanism to retrieve stuck assets.
+        require(vndToken.balanceOf(address(this)) >= _amount, "DeBank: Not enough VNDT in contract to recover"); // Ensures the contract has enough funds to recover.
+        require(vndToken.transfer(bankOwner, _amount), "DeBank: Failed to recover VNDT"); // Transfers VNDT to the bankOwner's wallet.
+    }
+
+    /**
+     * @dev Sets the global annual interest rate for new savings accounts.
+     * Only the bank owner (`bankOwner`) can call this function.
+     * @param _newRate The new annual interest rate in basis points (e.g., 500 = 5%).
+     */
+    function setSavingsInterestRate(uint256 _newRate) public onlyBankOwner {
+        savingsInterestRate = _newRate; // Updates the global savings interest rate.
+    }
+}
+```
+<br>
+```solidity
+// SPDX-License-Identifier: MIT
+// This specifies the license for the source code. The MIT License is a popular open-source license
+// that allows others to freely use, modify, and distribute the code.
+
+pragma solidity ^0.8.20;
+// Declares the Solidity compiler version required for this contract.
+// The caret `^` means the code is compatible with version 0.8.20 and up,
+// but not including 0.9.0 or later. This ensures your code compiles successfully
+// with minor future versions.
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+// Imports the ERC20 contract from the OpenZeppelin library.
+// This contract provides a standard implementation of the ERC-20 token standard,
+// including functions like `transfer`, `balanceOf`, `approve`, `transferFrom`, etc.
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+// Imports the Ownable contract from the OpenZeppelin library.
+// This contract provides a basic access control mechanism, where there is an 'owner'
+// address that has exclusive rights to certain functions (e.g., `mint`, `burn`).
+
+contract VNDT is ERC20, Ownable {
+    // Defines the VNDT (Vietnam Dong Token) contract.
+    // `is ERC20`: Inherits all functions and state variables from the ERC20 standard.
+    // `is Ownable`: Inherits the ownership features, making the deployer the owner.
+
+    // Constructor: This function is executed only once when the contract is deployed to the blockchain.
+    // It initializes the token's name, symbol, and mints the initial supply to the deployer.
+    constructor()
+        ERC20("Vietnam Dong Token", "VNDT") // Calls the ERC20 constructor to set the token's name and symbol.
+        Ownable(msg.sender) // Calls the Ownable constructor, setting the contract deployer (msg.sender) as the owner.
+    {
+        // Mints the initial supply of 1,000,000,000 VNDT to the contract deployer (msg.sender).
+        // `1_000_000_000` is the human-readable amount.
+        // `(10 ** decimals())` converts this human-readable amount to the smallest unit of the token (wei-like units).
+        // ERC20 tokens typically have 18 decimals, so 1,000,000,000 * 10^18 = 10^27 smallest units.
+        _mint(msg.sender, 1_000_000_000 * (10 ** decimals()));
+    }
+
+    // Function to mint (create) new tokens.
+    // Only the contract owner can call this function.
+    // This will be used to issue new VNDT for testing purposes or as part of a controlled supply mechanism.
+    // @param to The address to which new tokens will be minted.
+    // @param amount The amount of new tokens to mint (in smallest units).
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount); // Calls the internal `_mint` function from the ERC20 contract.
+    }
+
+    // Function to burn (destroy) tokens.
+    // Only the contract owner can call this function.
+    // This can be used in scenarios where tokens need to be removed from circulation (e.g., in a redemption process).
+    // @param amount The amount of tokens to burn from the caller's balance (in smallest units).
+    function burn(uint256 amount) public onlyOwner {
+        _burn(msg.sender, amount); // Calls the internal `_burn` function from the ERC20 contract.
+    }
+}
+```
+<br>
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+
+contract DeBank is Ownable, Pausable {
+    // --- State Variables ---
+    address public bankOwner;
+    IERC20Metadata public vndToken;
+    mapping(address => bool) public isAccount;
+    mapping(address => uint256) public balances;
+    uint256 public totalDeposits;
+    uint256 public dailyTransferLimit;
+    mapping(address => mapping(uint256 => uint256)) public dailyTransferredAmount;
+    uint256 public transferFeeRate;
+    address public feeReceiver;
+
+    struct Transaction {
+        uint256 id;
+        address from;
+        address to;
+        uint256 amount;
+        uint256 timestamp;
+        string txType;
+        string description;
+    }
+
+    mapping(address => Transaction[]) public accountTransactions;
+    uint256 public nextTransactionId;
+
+    struct SavingsAccount {
+        uint256 amount;
+        uint256 startTime;
+        uint256 durationMonths;
+        uint256 interestRate;
+        bool isActive;
+    }
+    mapping(address => SavingsAccount[]) public userSavingsAccounts;
+    uint256 public savingsInterestRate;
+
+
+    // --- Sự kiện (Events) ---
+    event AccountOpened(address indexed account);
+    event Deposited(address indexed account, uint256 amount, uint256 balance);
+    event Withdrawn(address indexed account, uint256 amount, uint256 balance);
+    event Transferred(address indexed from, address indexed to, uint256 amount, uint256 fee);
+    event DailyLimitUpdated(uint256 newLimit);
+    event FeeRateUpdated(uint256 newRate);
+    event FeeReceiverUpdated(address indexed newReceiver);
+    event SavingsDeposited(address indexed account, uint256 amount, uint256 durationMonths);
+    event SavingsWithdrawn(address indexed account, uint256 amount, uint256 interestEarned);
+
+
+    // --- Constructor ---
+    constructor(address _vndTokenAddress) Ownable(msg.sender) Pausable() {
+        bankOwner = msg.sender;
+        vndToken = IERC20Metadata(_vndTokenAddress);
+        dailyTransferLimit = 1_000_000_000 * (10 ** vndToken.decimals());
+        transferFeeRate = 10;
+        feeReceiver = msg.sender;
+        nextTransactionId = 1;
+        savingsInterestRate = 500;
+    }
+
+    // --- Bộ Biến Đổi (Modifiers) ---
+    modifier onlyBankOwner() {
+        require(msg.sender == bankOwner, "DeBank: Only bank owner can call this function");
+        _;
+    }
+
+    modifier accountExists(address _account) {
+        require(isAccount[_account], "DeBank: Account does not exist");
+        _;
+    }
+
+    modifier sufficientBalance(uint256 _amount) {
+        require(balances[msg.sender] >= _amount, "DeBank: Insufficient balance");
+        _;
+    }
+
+    modifier notZeroAddress(address _addr) {
+        require(_addr != address(0), "DeBank: Zero address not allowed");
+        _;
+    }
+
+    modifier checkDailyLimit(address _sender, uint256 _amount) {
+        uint256 today = block.timestamp / 1 days;
+        require(dailyTransferredAmount[_sender][today] + _amount <= dailyTransferLimit, "DeBank: Daily transfer limit exceeded");
+        _;
+    }
+
+    // --- Hàm Người Dùng (User Functions) ---
+    function deposit(uint256 _amount) public notZeroAddress(msg.sender) whenNotPaused {
+        require(_amount > 0, "DeBank: Deposit amount must be greater than zero");
+        if (!isAccount[msg.sender]) {
+            isAccount[msg.sender] = true;
+            emit AccountOpened(msg.sender);
+        }
+        require(vndToken.transferFrom(msg.sender, address(this), _amount), "DeBank: VNDT transferFrom failed. Did you approve enough?");
+        balances[msg.sender] = balances[msg.sender] + _amount;
+        totalDeposits = totalDeposits + _amount;
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: msg.sender,
+                to: address(this),
+                amount: _amount,
+                timestamp: block.timestamp,
+                txType: "Deposit",
+                description: "Deposit to DeBank account"
+            })
+        );
+        emit Deposited(msg.sender, _amount, balances[msg.sender]);
+    }
+
+    function withdraw(uint256 _amount) public accountExists(msg.sender) sufficientBalance(_amount) whenNotPaused {
+        require(_amount > 0, "DeBank: Withdraw amount must be greater than zero");
+        balances[msg.sender] = balances[msg.sender] - _amount;
+        require(vndToken.transfer(msg.sender, _amount), "DeBank: VNDT transfer failed during withdrawal");
+        totalDeposits = totalDeposits - _amount;
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: address(this),
+                to: msg.sender,
+                amount: _amount,
+                timestamp: block.timestamp,
+                txType: "Withdraw",
+                description: "Withdraw from DeBank account"
+            })
+        );
+        emit Withdrawn(msg.sender, _amount, balances[msg.sender]);
+    }
+
+    function transfer(address _to, uint256 _amount)
+        public
+        accountExists(msg.sender)
+        notZeroAddress(_to)
+        sufficientBalance(_amount)
+        checkDailyLimit(msg.sender, _amount)
+        whenNotPaused
+    {
+        require(_amount > 0, "DeBank: Transfer amount must be greater than zero");
+        require(msg.sender != _to, "DeBank: Cannot transfer to yourself");
+
+        uint256 fee = _amount * transferFeeRate / 10000;
+        uint256 amountAfterFee = _amount - fee;
+
+        balances[msg.sender] = balances[msg.sender] - _amount;
+
+        if (!isAccount[_to]) {
+            isAccount[_to] = true;
+            emit AccountOpened(_to);
+        }
+        balances[_to] = balances[_to] + amountAfterFee;
+
+        if (fee > 0) {
+            require(vndToken.transfer(feeReceiver, fee), "DeBank: Failed to transfer fee to receiver");
+        }
+
+        uint256 today = block.timestamp / 1 days;
+        dailyTransferredAmount[msg.sender][today] = dailyTransferredAmount[msg.sender][today] + _amount;
+
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: msg.sender,
+                to: _to,
+                amount: _amount,
+                timestamp: block.timestamp,
+                txType: "TransferOut",
+                description: string.concat("Transfer to ", Strings.toHexString(_to))
             })
         );
         accountTransactions[_to].push(
@@ -394,27 +818,20 @@ contract DeBank is Ownable, Pausable {
                 id: nextTransactionId++,
                 from: msg.sender,
                 to: _to,
-                amount: amountAfterFee, // Ghi lại số tiền thực nhận cho người nhận
+                amount: amountAfterFee,
                 timestamp: block.timestamp,
                 txType: "TransferIn",
-                description: string.concat("Received from ", Strings.toHexString(msg.sender)) // Nối chuỗi
+                description: string.concat("Received from ", Strings.toHexString(msg.sender))
             })
         );
         emit Transferred(msg.sender, _to, _amount, fee);
-        // Phát ra sự kiện `Transferred` để frontend lắng nghe.
     }
 
     function getBalance(address _account) public view returns (uint256) {
-        // `view`: hàm này không thay đổi trạng thái của blockchain, chỉ đọc dữ liệu.
-        // Do đó, gọi hàm `view` không tốn phí gas (khi được gọi từ bên ngoài).
-        // Hàm này không yêu cầu `accountExists` để có thể trả về 0 cho tài khoản chưa tồn tại.
         return balances[_account];
     }
 
     function getAccountTransactionHistory(address _account) public view accountExists(_account) returns (Transaction[] memory) {
-        // `memory`: chỉ định rằng mảng được trả về là một bản sao tạm thời trong bộ nhớ,
-        // không được lưu trữ vĩnh viễn trên storage của contract.
-        // Hàm này yêu cầu tài khoản phải tồn tại vì việc truy vấn lịch sử cho tài khoản không tồn tại là không có ý nghĩa.
         return accountTransactions[_account];
     }
 
@@ -423,135 +840,684 @@ contract DeBank is Ownable, Pausable {
         return dailyTransferredAmount[_account][today];
     }
 
-    /**
-     * @dev Cho phép người dùng gửi VNDT vào tài khoản tiết kiệm với một kỳ hạn cố định.
-     * Số tiền gửi sẽ bị khóa trong hợp đồng và không thể rút cho đến khi kỳ hạn kết thúc.
-     * @param _amount Số lượng VNDT muốn gửi (tính bằng đơn vị nhỏ nhất của token).
-     * @param _durationMonths Kỳ hạn của khoản tiết kiệm tính bằng tháng (ví dụ: 3, 6, 12).
-     */
     function depositSavings(uint256 _amount, uint256 _durationMonths) public accountExists(msg.sender) sufficientBalance( _amount) whenNotPaused {
         require(_amount > 0, "DeBank: Savings deposit amount must be greater than zero");
-        require(_durationMonths > 0 && _durationMonths <= 60, "DeBank: Savings duration must be between 1 and 60 months"); // Giới hạn kỳ hạn để tránh lỗi số lớn
+        require(_durationMonths > 0 && _durationMonths <= 60, "DeBank: Savings duration must be between 1 and 60 months");
 
-        // Giảm số dư chính của người dùng (tiền được chuyển từ balances sang userSavingsAccounts)
-        // Số dư trong `balances` giảm, nhưng `totalDeposits` không đổi vì tiền vẫn nằm trong contract,
-        // chỉ là trạng thái quản lý của nó thay đổi (từ số dư giao dịch sang số dư tiết kiệm).
         balances[msg.sender] = balances[msg.sender] - _amount;
 
-        // Ghi lại thông tin khoản tiết kiệm mới vào mảng `userSavingsAccounts` của người dùng.
         userSavingsAccounts[msg.sender].push(
             SavingsAccount({
                 amount: _amount,
-                startTime: block.timestamp, // Thời điểm bắt đầu tính lãi
+                startTime: block.timestamp,
                 durationMonths: _durationMonths,
-                interestRate: savingsInterestRate, // Sử dụng lãi suất toàn cầu hiện tại
-                isActive: true // Đánh dấu khoản tiết kiệm đang hoạt động
+                interestRate: savingsInterestRate,
+                isActive: true
             })
         );
 
-        // Ghi lại giao dịch vào lịch sử của người gửi.
         accountTransactions[msg.sender].push(
             Transaction({
                 id: nextTransactionId++,
                 from: msg.sender,
-                to: address(this), // Đại diện cho tài khoản tiết kiệm nội bộ (tiền vẫn trong hợp đồng)
+                to: address(this),
                 amount: _amount,
                 timestamp: block.timestamp,
                 txType: "SavingsDeposit",
                 description: string.concat("Deposit to savings for ", Strings.toString(_durationMonths), " months")
             })
         );
-        emit SavingsDeposited(msg.sender, _amount, _durationMonths); // Phát ra sự kiện SavingsDeposited
+        emit SavingsDeposited(msg.sender, _amount, _durationMonths);
     }
 
-    /**
-     * @dev Cho phép người dùng rút tiền từ tài khoản tiết kiệm sau khi kỳ hạn kết thúc.
-     * Số tiền gốc và lãi sẽ được chuyển về số dư chính của người dùng.
-     * @param _index Chỉ số của khoản tiết kiệm trong mảng `userSavingsAccounts` của người dùng.
-     */
     function withdrawSavings(uint256 _index) public accountExists(msg.sender) whenNotPaused {
-        // Lấy tham chiếu đến khoản tiết kiệm cụ thể
-        require(_index < userSavingsAccounts[msg.sender].length, "DeBank: Invalid savings account index"); // Kiểm tra index hợp lệ
+        require(_index < userSavingsAccounts[msg.sender].length, "DeBank: Invalid savings account index");
         SavingsAccount storage sAccount = userSavingsAccounts[msg.sender][_index];
         
-        require(sAccount.isActive, "DeBank: Savings account is not active"); // Đảm bảo khoản tiết kiệm đang hoạt động
+        require(sAccount.isActive, "DeBank: Savings account is not active");
 
-        // Tính toán thời điểm kết thúc kỳ hạn
-        // Sử dụng 30 ngày/tháng để đơn giản hóa, có thể dùng chính xác số giây trong tháng nếu cần.
         uint256 endTime = sAccount.startTime + (sAccount.durationMonths * 30 days);
-        require(block.timestamp >= endTime, "DeBank: Savings period has not ended yet"); // Đảm bảo kỳ hạn đã kết thúc
+        require(block.timestamp >= endTime, "DeBank: Savings period has not ended yet");
 
-        // Tính toán lãi suất (lãi suất đơn giản hàng năm, chia theo tháng)
-        // Lãi = (số tiền * lãi suất / 10000) * (số tháng / 12)
-        // Phép chia cuối cùng `/ 12` là để chuyển đổi lãi suất năm sang lãi suất tháng tương ứng với kỳ hạn.
         uint256 interestEarned = (sAccount.amount * sAccount.interestRate / 10000) * sAccount.durationMonths / 12;
-        uint256 totalAmount = sAccount.amount + interestEarned; // Tổng số tiền gốc + lãi
+        uint256 totalAmount = sAccount.amount + interestEarned;
 
-        // Chuyển tổng số tiền (gốc + lãi) trở lại số dư chính của người dùng
         balances[msg.sender] = balances[msg.sender] + totalAmount;
-        sAccount.isActive = false; // Đánh dấu khoản tiết kiệm đã được rút
+        sAccount.isActive = false;
 
-        // Ghi lại giao dịch rút tiết kiệm vào lịch sử
         accountTransactions[msg.sender].push(
             Transaction({
                 id: nextTransactionId++,
-                from: address(this), // Đại diện cho hợp đồng DeBank (nguồn tiền trả lãi)
+                from: address(this),
                 to: msg.sender,
                 amount: totalAmount,
                 timestamp: block.timestamp,
                 txType: "SavingsWithdrawal",
-                description: string.concat("Withdrawal from savings, interest earned: ", Strings.toString(interestEarned / (10 ** vndToken.decimals()))) // Hiển thị lãi suất đã kiếm được
+                description: string.concat("Withdrawal from savings, interest earned: ", Strings.toString(interestEarned / (10 ** vndToken.decimals())))
             })
         );
-        emit SavingsWithdrawn(msg.sender, sAccount.amount, interestEarned); // Phát ra sự kiện SavingsWithdrawn
+        emit SavingsWithdrawn(msg.sender, sAccount.amount, interestEarned);
     }
 
 
-    // --- Hàm Quản Trị (Admin Functions) ---
-    // Các hàm này được bảo vệ bởi modifier `onlyBankOwner` để đảm bảo an toàn và quyền kiểm soát.
-    // Chúng cũng sử dụng modifier từ Pausable để đảm bảo hoạt động đúng theo trạng thái tạm dừng.
-
     function pause() public onlyBankOwner whenNotPaused {
-        // Chỉ có thể tạm dừng hợp đồng nếu người gọi là bankOwner và hợp đồng chưa bị tạm dừng.
-        _pause(); // Hàm nội bộ từ Pausable, thực hiện việc tạm dừng hợp đồng.
+        _pause();
     }
 
     function unpause() public onlyBankOwner whenPaused {
-        // Chỉ có thể khởi động lại hợp đồng nếu người gọi là bankOwner và hợp đồng đang bị tạm dừng.
-        _unpause(); // Hàm nội bộ từ Pausable, thực hiện việc khởi động lại hợp đồng.
+        _unpause();
     }
 
     function setDailyTransferLimit(uint256 _newLimit) public onlyBankOwner {
-        require(_newLimit > 0, "DeBank: Daily limit must be greater than zero"); // Hạn mức phải lớn hơn 0
-        dailyTransferLimit = _newLimit; // Cập nhật biến trạng thái
-        emit DailyLimitUpdated(_newLimit); // Phát ra sự kiện thông báo thay đổi.
+        require(_newLimit > 0, "DeBank: Daily limit must be greater than zero");
+        dailyTransferLimit = _newLimit;
+        emit DailyLimitUpdated(_newLimit);
     }
 
     function setFeeRate(uint256 _newRate) public onlyBankOwner {
-        require(_newRate <= 10000, "DeBank: Fee rate cannot exceed 100%"); // Đảm bảo tỷ lệ phí không vượt quá 100% (10000 basis points)
-        transferFeeRate = _newRate; // Cập nhật biến trạng thái
-        emit FeeRateUpdated(_newRate); // Phát ra sự kiện thông báo thay đổi.
+        require(_newRate <= 10000, "DeBank: Fee rate cannot exceed 100%");
+        transferFeeRate = _newRate;
+        emit FeeRateUpdated(_newRate);
     }
 
     function setFeeReceiver(address _newReceiver) public onlyBankOwner notZeroAddress(_newReceiver) {
-        feeReceiver = _newReceiver; // Cập nhật biến trạng thái
-        emit FeeReceiverUpdated(_newReceiver); // Phát ra sự kiện thông báo thay đổi.
+        feeReceiver = _newReceiver;
+        emit FeeReceiverUpdated(_newReceiver);
     }
 
     function recoverVNDT(uint256 _amount) public onlyBankOwner {
-        // Hàm này cho phép chủ sở hữu ngân hàng thu hồi bất kỳ VNDT nào vô tình được gửi trực tiếp
-        // vào địa chỉ contract DeBank mà không qua hàm `deposit` (ví dụ: người dùng gửi nhầm).
-        // Đây là một cơ chế an toàn để khôi phục tài sản bị mắc kẹt.
-        require(vndToken.balanceOf(address(this)) >= _amount, "DeBank: Not enough VNDT in contract to recover"); // Đảm bảo contract có đủ tiền để thu hồi
-        require(vndToken.transfer(bankOwner, _amount), "DeBank: Failed to recover VNDT"); // Chuyển VNDT về ví của bankOwner
+        require(vndToken.balanceOf(address(this)) >= _amount, "DeBank: Not enough VNDT in contract to recover");
+        require(vndToken.transfer(bankOwner, _amount), "DeBank: Failed to recover VNDT");
+    }
+
+    function setSavingsInterestRate(uint256 _newRate) public onlyBankOwner {
+        savingsInterestRate = _newRate;
+    }
+}
+```
+Chào bạn, tôi đã nắm được yêu cầu của bạn. Chúng ta sẽ cập nhật file `DeBank.sol` để chuyển toàn bộ các comment sang tiếng Anh, theo kế hoạch quốc tế hóa dự án của bạn.
+
+Dưới đây là mã nguồn của `DeBank.sol` với tất cả các comment đã được dịch sang tiếng Anh.
+
+### **Bước 1: Cập nhật `debank-contracts/contracts/DeBank.sol`**
+
+**Vui lòng cập nhật toàn bộ nội dung của file `debank-contracts/contracts/DeBank.sol` của bạn bằng mã nguồn dưới đây:**
+
+
+```solidity
+// SPDX-License-Identifier: MIT
+// This specifies the license for the source code. The MIT License is a popular open-source license
+// that allows others to freely use, modify, and distribute the code.
+
+pragma solidity ^0.8.20;
+// Declares the Solidity compiler version required for this contract.
+// The caret `^` means the code is compatible with version 0.8.20 and up,
+// but not including 0.9.0 or later. This ensures your code compiles successfully
+// with minor future versions.
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// Imports the IERC20 interface from the OpenZeppelin library.
+// IERC20 is a set of functions (interface) that every ERC-20 token must implement.
+// Our DeBank contract will not be an ERC-20 token itself, but it will interact
+// with the VNDT token (which is an ERC-20), so we need this interface to call VNDT's functions.
+
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+// Imports the IERC20Metadata interface from the OpenZeppelin library.
+// This interface extends IERC20 to include functions for reading metadata such as `name()`, `symbol()`, and `decimals()`.
+// We need it to access the `decimals()` function of the VNDT token in the constructor when setting default limits.
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+// Imports the Ownable contract from the OpenZeppelin library.
+// This contract provides a basic access control mechanism, where there is an 'owner'
+// address that has exclusive rights to certain functions (e.g., `mint`, `burn`).
+
+import "@openzeppelin/contracts/utils/Pausable.sol";
+// Imports the Pausable library from OpenZeppelin.
+// This contract provides functionalities to pause and unpause the contract's operations.
+// It includes modifiers like `whenNotPaused` (only runs when not paused) and `whenPaused` (only runs when paused).
+
+import "@openzeppelin/contracts/utils/Strings.sol";
+// Imports the Strings library from OpenZeppelin.
+// This library provides utility functions for string manipulation, including `toHexString()`
+// to convert an address to a hexadecimal string, used for concatenating strings in transaction descriptions.
+
+// SafeMath.sol is not imported because Solidity 0.8.0+ has built-in overflow and underflow checks
+// for arithmetic operations on integer types by default.
+// This makes `+`, `-`, `*`, `/` operations on `uint256` safer without an additional library.
+
+contract DeBank is Ownable, Pausable {
+    // Defines the DeBank contract.
+    // `is Ownable`: This contract inherits all functions, variables, and modifiers from the Ownable contract,
+    // providing an ownership mechanism and access control.
+    // `is Pausable`: This contract inherits all functions, variables, and modifiers from the Pausable contract,
+    // enabling the ability to pause and unpause contract operations.
+
+    // `using SafeMath for uint256;` is not needed as SafeMath is no longer imported and basic arithmetic operations are safe.
+
+    // --- State Variables ---
+    // State variables are permanently stored on the blockchain.
+    // Their values persist across transactions.
+
+    address public bankOwner;
+    // The address of the DeBank contract's owner.
+    // This owner has the privilege to execute administrative functions.
+    // `public` automatically creates a getter function `bankOwner()` to read this value from outside the contract.
+
+    IERC20Metadata public vndToken;
+    // An instance of the IERC20Metadata interface, representing the deployed VNDT token smart contract.
+    // This variable allows the DeBank contract to interact with the VNDT token contract
+    // (e.g., calling `transferFrom`, `transfer`).
+
+    mapping(address => bool) public isAccount;
+    // A mapping (a key-value store) to check if an address has an account within the DeBank system.
+    // Key: address. Value: boolean (true if the account exists, false otherwise).
+    // An account is considered "existing" in DeBank when it performs its first `deposit` transaction.
+
+    mapping(address => uint256) public balances;
+    // A mapping storing the VNDT balance of each account within the DeBank contract.
+    // Key: user's address. Value: VNDT balance (uint256, in the smallest token units).
+    // IMPORTANT NOTE: This balance is the amount of VNDT that the DeBank contract holds ON BEHALF of the user,
+    // not the balance directly in their personal wallet (e.g., Metamask).
+
+    uint256 public totalDeposits;
+    // The total amount of VNDT currently held by the DeBank contract.
+    // This is the sum of all user `balances`.
+
+    uint256 public dailyTransferLimit;
+    // The maximum transfer amount that each user can perform within a single day (in the smallest VNDT units).
+    // This value can be updated by the `bankOwner`.
+
+    mapping(address => mapping(uint256 => uint256)) public dailyTransferredAmount;
+    // A nested mapping to track the total amount a user has transferred on a specific day.
+    // Outer Key: user's address.
+    // Inner Key: timestamp of the current day (uint256, calculated as `block.timestamp / 1 days`).
+    // Value: the total amount transferred on that day (uint256).
+
+    uint256 public transferFeeRate;
+    // The transfer fee rate. This value is expressed in "basis points" (one hundredths of a percent).
+    // Example: 10000 basis points = 100%. If `transferFeeRate = 10`, the fee is 0.1% (10 / 10000 = 0.001).
+    // Can be updated by the `bankOwner`.
+
+    address public feeReceiver;
+    // The address that will receive transaction fees. Typically the bank owner's address.
+    // Can be updated by the `bankOwner`.
+
+    // A structure (struct) to define the details of a transaction record.
+    // These structs are stored in the `accountTransactions` mapping.
+    struct Transaction {
+        uint256 id;                 // Unique ID for each transaction, automatically increments.
+        address from;               // The sender's address for the transaction.
+        address to;                 // The recipient's address for the transaction.
+        uint256 amount;             // The amount/token of the transaction (before fee deduction for sender, after fee for recipient).
+        uint256 timestamp;          // The time the transaction occurred (Unix timestamp).
+        string txType;              // Type of transaction: "Deposit", "Withdraw", "TransferOut", "TransferIn", "SavingsDeposit", etc.
+        string description;         // A brief description of the transaction, including a shortened address for readability.
+    }
+
+    mapping(address => Transaction[]) public accountTransactions;
+    // A mapping to store the transaction history for each account.
+    // Key: user's address. Value: an array of Transaction structs.
+
+    uint256 public nextTransactionId;
+    // A counter used to generate unique IDs for each new transaction.
+    // Increments after each transaction is recorded.
+
+    // --- Components for Savings Functionality (Advanced) ---
+    // Structure to store information about each user's savings account.
+    struct SavingsAccount {
+        uint256 amount;             // The principal amount deposited for savings.
+        uint256 startTime;          // The timestamp of the block when the savings deposit began.
+        uint256 durationMonths;     // The duration of the savings term in months (e.g., 3, 6, 12 months).
+        uint256 interestRate;       // The annual interest rate (in basis points) applied to this savings account at the time of deposit.
+        bool isActive;              // The status of the savings account (true: active/not yet withdrawn, false: withdrawn).
+    }
+    mapping(address => SavingsAccount[]) public userSavingsAccounts; // Mapping storing each user's savings accounts.
+    // Key: user's address. Value: an array of SavingsAccount structs.
+
+    uint256 public savingsInterestRate; // The global annual interest rate (in basis points) for new savings deposits.
+    // This value can be updated by the `bankOwner`.
+
+
+    // --- Events ---
+    // Events are how smart contracts "announce" what has happened on the blockchain.
+    // They are recorded in blockchain logs and can be listened to by frontend applications to update the UI in real-time.
+    // The `indexed` keyword helps optimize searching and filtering events in logs.
+
+    event AccountOpened(address indexed account);
+    // Emitted when a new account is opened in DeBank (first interaction, e.g., deposit).
+
+    event Deposited(address indexed account, uint256 amount, uint256 balance);
+    // Emitted when a user deposits VNDT into DeBank.
+    // `account`: the sender's address. `amount`: the deposited amount. `balance`: the new account balance.
+
+    event Withdrawn(address indexed account, uint256 amount, uint256 balance);
+    // Emitted when a user withdraws VNDT from DeBank.
+    // `account`: the withdrawer's address. `amount`: the withdrawn amount. `balance`: the new account balance.
+
+    event Transferred(address indexed from, address indexed to, uint256 amount, uint256 fee);
+    // Emitted when VNDT is transferred between accounts within DeBank.
+    // `from`: sender's address. `to`: recipient's address. `amount`: transferred amount. `fee`: collected fee.
+
+    event DailyLimitUpdated(uint256 newLimit);
+    // Emitted when the daily transfer limit is updated by the owner.
+
+    event FeeRateUpdated(uint256 newRate);
+    // Emitted when the transfer fee rate is updated by the owner.
+
+    event FeeReceiverUpdated(address indexed newReceiver);
+    // Emitted when the fee recipient address is updated by the owner.
+
+    event SavingsDeposited(address indexed account, uint256 amount, uint256 durationMonths);
+    // Emitted when a user deposits funds into a savings account.
+    // `account`: depositor's address. `amount`: deposited amount. `durationMonths`: savings term.
+
+    event SavingsWithdrawn(address indexed account, uint256 amount, uint256 interestEarned);
+    // Emitted when a user withdraws funds from a savings account, including earned interest.
+
+    // --- Constructor ---
+    // This function is executed ONLY ONCE when the contract is deployed to the blockchain.
+    // It is used to initialize the contract's initial state variables.
+    constructor(address _vndTokenAddress) Ownable(msg.sender) Pausable() {
+        // `Ownable(msg.sender)`: Calls the Ownable contract's constructor to set the contract deployer's address
+        // (`msg.sender`) as the owner of this DeBank contract.
+        // `Pausable()`: Calls the Pausable contract's constructor. (It does not take an argument in OZ v5.x).
+        
+        bankOwner = msg.sender;
+        // Assigns the `bankOwner` variable to the address of the contract deployer.
+
+        vndToken = IERC20Metadata(_vndTokenAddress);
+        // Initializes the `vndToken` variable by casting the `_vndTokenAddress`
+        // to an IERC20Metadata object. This allows the DeBank contract to call ERC20 functions
+        // on the VNDT token contract.
+
+        // Sets the initial default values for state variables:
+        dailyTransferLimit = 1_000_000_000 * (10 ** vndToken.decimals());
+        // Sets the default daily transfer limit to 1 billion VNDT.
+        // `10 ** vndToken.decimals()` converts the human-readable amount (1 billion VNDT)
+        // to the smallest unit used by the token (e.g., 10^18 if decimals is 18).
+
+        transferFeeRate = 10;
+        // Sets the default transfer fee rate to 0.1% (10 basis points).
+
+        feeReceiver = msg.sender;
+        // The default fee recipient address is the address of the DeBank contract's owner.
+
+        nextTransactionId = 1;
+        // Initializes the next transaction ID to 1.
+
+        savingsInterestRate = 500; // Default annual interest rate for savings is 5% (500 basis points).
+    }
+
+    // --- Modifiers ---
+    // Modifiers are functions attached to other functions to add conditional checks before
+    // the main function's code is executed. If the condition is not met, the transaction will revert.
+    // This helps in code reuse and enhances contract security.
+
+    modifier onlyBankOwner() {
+        // This modifier ensures that only the `bankOwner` (the contract deployer) can call the function.
+        require(msg.sender == bankOwner, "DeBank: Only bank owner can call this function");
+        // `require`: checks a condition. If the condition is false, the transaction will revert with an error message.
+        _; // The underscore is where the main function's code will be inserted and executed.
+    }
+
+    modifier accountExists(address _account) {
+        // This modifier checks if the `_account` exists (has interacted/deposited before) in the DeBank system.
+        require(isAccount[_account], "DeBank: Account does not exist");
+        _;
+    }
+
+    modifier sufficientBalance(uint256 _amount) {
+        // This modifier checks if the function caller (`msg.sender`) has sufficient balance (`balances[msg.sender]`)
+        // to perform the transaction with the given `_amount`.
+        // In Solidity 0.8.0+, subtraction will automatically revert if the result is negative (underflow),
+        // so checking `balances[msg.sender] >= _amount` is safe and necessary.
+        require(balances[msg.sender] >= _amount, "DeBank: Insufficient balance");
+        _;
+    }
+
+    modifier notZeroAddress(address _addr) {
+        // This modifier ensures that the `_addr` is not the "zero address" (0x0).
+        // The zero address is a special address often used as a default value or a burn address.
+        // Sending funds to 0x0 is equivalent to burning them.
+        require(_addr != address(0), "DeBank: Zero address not allowed");
+        _;
+    }
+
+    modifier checkDailyLimit(address _sender, uint256 _amount) {
+        // This modifier checks if adding `_amount` to the `_sender`'s total transferred amount for the day
+        // exceeds the `dailyTransferLimit`.
+        uint256 today = block.timestamp / 1 days; // Calculates the timestamp of the current day (rounded down to the day).
+        // `1 days` is a global constant equivalent to 24 * 60 * 60 seconds.
+        // Integer division truncates the hours/minutes/seconds part, keeping only the day part.
+        require(dailyTransferredAmount[_sender][today] + _amount <= dailyTransferLimit, "DeBank: Daily transfer limit exceeded");
+        _;
+    }
+
+    // --- User Functions ---
+    // These are functions that regular users can call to interact with the bank.
+
+    /**
+     * @dev Allows a user to deposit VNDT into their DeBank account.
+     * The user MUST have called the `approve()` function on the VNDT contract beforehand
+     * to grant the DeBank contract permission to move a specific amount of VNDT from their wallet.
+     * If no `approve` call was made or the approved amount is insufficient, the `transferFrom`
+     * transaction will fail.
+     * @param _amount The amount of VNDT to deposit (in the token's smallest units).
+     */
+    function deposit(uint256 _amount) public notZeroAddress(msg.sender) whenNotPaused {
+        // `public`: the function can be called from anywhere.
+        // `notZeroAddress(msg.sender)`: uses a modifier to ensure the caller is not the zero address.
+        // `whenNotPaused`: modifier from Pausable, ensures the function only runs when the contract is not paused.
+        require(_amount > 0, "DeBank: Deposit amount must be greater than zero");
+        // Ensures the deposit amount is greater than 0 to prevent meaningless transactions.
+
+        // If this is the first time this account interacts with DeBank (not yet in `isAccount`),
+        // marks it as an existing account and emits an `AccountOpened` event.
+        if (!isAccount[msg.sender]) {
+            isAccount[msg.sender] = true;
+            emit AccountOpened(msg.sender); // Emits an event signaling a new account has been opened.
+        }
+
+        // Transfers VNDT from the user's wallet (msg.sender) to the DeBank contract (address(this)).
+        // This command ONLY SUCCEEDS if the user has previously called `vndToken.approve(DeBankContractAddress, _amount)`.
+        require(vndToken.transferFrom(msg.sender, address(this), _amount), "DeBank: VNDT transferFrom failed. Did you approve enough?");
+        // `address(this)`: refers to the DeBank contract's own address.
+
+        // Updates the user's VNDT balance within the DeBank contract.
+        balances[msg.sender] = balances[msg.sender] + _amount; // Uses native addition.
+        // Updates the total amount of VNDT held by the DeBank contract.
+        totalDeposits = totalDeposits + _amount; // Uses native addition.
+
+        // Records the transaction in the sender's history.
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++, // Uses and increments a unique transaction ID.
+                from: msg.sender,
+                to: address(this), // The DeBank contract's address is the recipient in a deposit transaction.
+                amount: _amount,
+                timestamp: block.timestamp, // The time of the transaction (Unix timestamp).
+                txType: "Deposit", // Transaction type: "Deposit".
+                description: "Deposit to DeBank account" // Brief description.
+            })
+        );
+        emit Deposited(msg.sender, _amount, balances[msg.sender]);
+        // Emits the `Deposited` event for the frontend to listen to and update the UI.
     }
 
     /**
-     * @dev Đặt lại lãi suất hàng năm toàn cầu cho các tài khoản tiết kiệm mới.
-     * Chỉ có chủ sở hữu ngân hàng (`bankOwner`) mới có thể gọi hàm này.
-     * @param _newRate Lãi suất hàng năm mới tính bằng basis points (ví dụ: 500 = 5%).
+     * @dev Allows a user to withdraw VNDT from their DeBank account to their personal wallet.
+     * @param _amount The amount of VNDT to withdraw (in the token's smallest units).
+     */
+    function withdraw(uint256 _amount) public accountExists(msg.sender) sufficientBalance(_amount) whenNotPaused {
+        // `accountExists(msg.sender)`: Ensures the caller has an account in DeBank.
+        // `sufficientBalance(_amount)`: Ensures the caller has enough balance in DeBank to withdraw.
+        // `whenNotPaused`: Ensures the function only runs when the contract is not paused.
+        require(_amount > 0, "DeBank: Withdraw amount must be greater than zero");
+        // Ensures the withdrawal amount is greater than 0.
+
+        // Decreases the user's balance within the DeBank contract.
+        balances[msg.sender] = balances[msg.sender] - _amount; // Uses native subtraction.
+
+        // Transfers VNDT from the DeBank contract to the user's personal wallet.
+        require(vndToken.transfer(msg.sender, _amount), "DeBank: VNDT transfer failed during withdrawal");
+
+        // Decreases the total amount of VNDT held by the DeBank contract (as funds leave the contract).
+        totalDeposits = totalDeposits - _amount; // Uses native subtraction.
+
+        // Records the transaction in the withdrawer's history.
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: address(this), // The DeBank contract's address is the sender in a withdrawal transaction.
+                to: msg.sender,
+                amount: _amount,
+                timestamp: block.timestamp,
+                txType: "Withdraw",
+                description: "Withdraw from DeBank account"
+            })
+        );
+        emit Withdrawn(msg.sender, _amount, balances[msg.sender]);
+        // Emits the `Withdrawn` event for the frontend to listen to.
+    }
+
+    /**
+     * @dev Allows a user to transfer VNDT to another account within the DeBank system.
+     * Applies a daily transfer limit and calculates a transaction fee.
+     * @param _to The recipient's address.
+     * @param _amount The amount of VNDT to transfer (in the token's smallest units).
+     */
+    function transfer(address _to, uint256 _amount)
+        public
+        accountExists(msg.sender) // Ensures the sender has an account in DeBank.
+        notZeroAddress(_to)        // Ensures the recipient's address is not the zero address.
+        sufficientBalance(_amount) // Ensures the sender has enough balance in DeBank.
+        checkDailyLimit(msg.sender, _amount) // Checks the daily transfer limit.
+        whenNotPaused // Ensures the function only runs when the contract is not paused.
+    {
+        require(_amount > 0, "DeBank: Transfer amount must be greater than zero");
+        require(msg.sender != _to, "DeBank: Cannot transfer to yourself");
+        // Ensures sender and recipient are not the same address to prevent unnecessary transactions.
+
+        // Calculates the transaction fee.
+        // Fee = (amount * fee_rate) / 10000 (since fee_rate is in basis points).
+        uint256 fee = _amount * transferFeeRate / 10000; // Uses native multiplication and division.
+        // The actual amount the recipient will receive after deducting the fee.
+        uint256 amountAfterFee = _amount - fee; // Uses native subtraction.
+
+        // Decreases the sender's balance by the TOTAL amount (including fee) within the DeBank contract.
+        balances[msg.sender] = balances[msg.sender] - _amount; // Uses native subtraction.
+
+        // If the recipient does not yet have an account in DeBank, creates a new account for them.
+        if (!isAccount[_to]) {
+            isAccount[_to] = true;
+            emit AccountOpened(_to); // Emits an event signaling a new account has been opened.
+        }
+        // Increases the recipient's balance by the amount received after fee deduction.
+        balances[_to] = balances[_to] + amountAfterFee; // Uses native addition.
+
+        // Transfers the transaction fee to the `feeReceiver` address.
+        if (fee > 0) {
+            // Only transfers the fee if it's greater than 0.
+            // `vndToken.transfer` is a function that sends tokens from the DeBank contract to the fee recipient address.
+            require(vndToken.transfer(feeReceiver, fee), "DeBank: Failed to transfer fee to receiver");
+        }
+
+        // Updates the sender's total transferred amount for the current day to enforce the daily limit.
+        uint256 today = block.timestamp / 1 days; // Gets the timestamp of the current day.
+        dailyTransferredAmount[msg.sender][today] = dailyTransferredAmount[msg.sender][today] + _amount; // Accumulates the transferred amount.
+
+        // Records the transaction in the SENDER's history.
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++, // Uses and increments a unique transaction ID.
+                from: msg.sender,
+                to: _to,
+                amount: _amount, // Records the original amount (before fee) for the sender.
+                timestamp: block.timestamp,
+                txType: "TransferOut",
+                description: string.concat("Transfer to ", Strings.toHexString(_to)) // Concatenates strings for a detailed description.
+            })
+        );
+        // Records the transaction in the RECIPIENT's history.
+        accountTransactions[_to].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: msg.sender,
+                to: _to,
+                amount: amountAfterFee, // Records the actual amount received for the recipient.
+                timestamp: block.timestamp,
+                txType: "TransferIn",
+                description: string.concat("Received from ", Strings.toHexString(msg.sender))
+            })
+        );
+        emit Transferred(msg.sender, _to, _amount, fee);
+        // Emits the `Transferred` event for the frontend to listen to.
+    }
+
+    /**
+     * @dev Returns the VNDT balance of a specific account within the DeBank system.
+     * @param _account The address of the account to check the balance for.
+     * @return The balance of that account (uint256).
+     */
+    function getBalance(address _account) public view returns (uint256) {
+        // `view`: This function does not modify the blockchain state; it only reads data.
+        // Therefore, calling a `view` function does not cost gas (when called externally).
+        // This function does not require `accountExists` so it can return 0 for non-existent accounts.
+        return balances[_account];
+    }
+
+    /**
+     * @dev Returns the entire transaction history for a specific account.
+     * This function requires the account to exist (have made at least one deposit).
+     * @param _account The address of the account.
+     * @return An array of Transaction structs representing the transaction history.
+     */
+    function getAccountTransactionHistory(address _account) public view accountExists(_account) returns (Transaction[] memory) {
+        // `memory`: Specifies that the returned array is a temporary copy in memory,
+        // not permanently stored in the contract's storage.
+        // This function requires the account to exist because querying history for a non-existent account is meaningless.
+        return accountTransactions[_account];
+    }
+
+    /**
+     * @dev Returns the total amount transferred by a user on the current day.
+     * @param _account The address of the account.
+     * @return The total amount transferred today.
+     */
+    function getDailyTransferredAmount(address _account) public view returns (uint256) {
+        uint256 today = block.timestamp / 1 days;
+        return dailyTransferredAmount[_account][today];
+    }
+
+    /**
+     * @dev Allows a user to deposit VNDT into a fixed-term savings account.
+     * The deposited amount will be locked within the contract and cannot be withdrawn until the term ends.
+     * @param _amount The amount of VNDT to deposit into savings (in the token's smallest units).
+     * @param _durationMonths The duration of the savings term in months (e.g., 3, 6, 12).
+     */
+    function depositSavings(uint256 _amount, uint256 _durationMonths) public accountExists(msg.sender) sufficientBalance( _amount) whenNotPaused {
+        require(_amount > 0, "DeBank: Savings deposit amount must be greater than zero");
+        require(_durationMonths > 0 && _durationMonths <= 60, "DeBank: Savings duration must be between 1 and 60 months"); // Limits the term to prevent overflow issues with large numbers.
+
+        // Decreases the user's main balance (funds are moved from `balances` to `userSavingsAccounts`).
+        // The balance in `balances` decreases, but `totalDeposits` does not change because the funds remain within the contract;
+        // only their management status changes (from transactional balance to savings balance).
+        balances[msg.sender] = balances[msg.sender] - _amount;
+
+        // Records the new savings account information in the user's `userSavingsAccounts` array.
+        userSavingsAccounts[msg.sender].push(
+            SavingsAccount({
+                amount: _amount,
+                startTime: block.timestamp, // The timestamp when interest calculation begins.
+                durationMonths: _durationMonths,
+                interestRate: savingsInterestRate, // Uses the current global interest rate.
+                isActive: true // Marks the savings account as active.
+            })
+        );
+
+        // Records the transaction in the sender's history.
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: msg.sender,
+                to: address(this), // Represents the internal savings account (funds remain within the contract).
+                amount: _amount,
+                timestamp: block.timestamp,
+                txType: "SavingsDeposit",
+                description: string.concat("Deposit to savings for ", Strings.toString(_durationMonths), " months")
+            })
+        );
+        emit SavingsDeposited(msg.sender, _amount, _durationMonths); // Emits the `SavingsDeposited` event.
+    }
+
+    /**
+     * @dev Allows a user to withdraw funds from a savings account after the term has ended.
+     * The principal amount and earned interest will be transferred back to the user's main balance.
+     * @param _index The index of the savings account within the user's `userSavingsAccounts` array.
+     */
+    function withdrawSavings(uint256 _index) public accountExists(msg.sender) whenNotPaused {
+        // Retrieves a reference to the specific savings account.
+        require(_index < userSavingsAccounts[msg.sender].length, "DeBank: Invalid savings account index"); // Checks if the index is valid.
+        SavingsAccount storage sAccount = userSavingsAccounts[msg.sender][_index];
+        
+        require(sAccount.isActive, "DeBank: Savings account is not active"); // Ensures the savings account is active.
+
+        // Calculates the end time of the savings term.
+        // Uses 30 days per month for simplicity; can use exact seconds in a month if needed.
+        uint256 endTime = sAccount.startTime + (sAccount.durationMonths * 30 days);
+        require(block.timestamp >= endTime, "DeBank: Savings period has not ended yet"); // Ensures the term has ended.
+
+        // Calculates the interest earned (simple annual interest, prorated by month).
+        // Interest = (amount * interest_rate / 10000) * (duration_months / 12)
+        // The final division by `/ 12` converts the annual interest rate to a monthly rate corresponding to the term.
+        uint256 interestEarned = (sAccount.amount * sAccount.interestRate / 10000) * sAccount.durationMonths / 12;
+        uint256 totalAmount = sAccount.amount + interestEarned; // Total amount = principal + interest.
+
+        // Transfers the total amount (principal + interest) back to the user's main balance.
+        balances[msg.sender] = balances[msg.sender] + totalAmount;
+        sAccount.isActive = false; // Marks the savings account as withdrawn.
+
+        // Records the savings withdrawal transaction in the history.
+        accountTransactions[msg.sender].push(
+            Transaction({
+                id: nextTransactionId++,
+                from: address(this), // Represents the DeBank contract (source of interest payment).
+                to: msg.sender,
+                amount: totalAmount,
+                timestamp: block.timestamp,
+                txType: "SavingsWithdrawal",
+                description: string.concat("Withdrawal from savings, interest earned: ", Strings.toString(interestEarned / (10 ** vndToken.decimals()))) // Displays earned interest.
+            })
+        );
+        emit SavingsWithdrawn(msg.sender, sAccount.amount, interestEarned); // Emits the `SavingsWithdrawn` event.
+    }
+
+
+    // --- Admin Functions ---
+    // These functions are protected by the `onlyBankOwner` modifier to ensure security and control.
+    // They also use modifiers from Pausable to ensure proper operation based on the paused state.
+
+    function pause() public onlyBankOwner whenNotPaused {
+        // Can only pause the contract if the caller is the bankOwner and the contract is not already paused.
+        _pause(); // Internal function from Pausable, performs the contract pausing.
+    }
+
+    function unpause() public onlyBankOwner whenPaused {
+        // Can only unpause the contract if the caller is the bankOwner and the contract is currently paused.
+        _unpause(); // Internal function from Pausable, performs the contract unpausing.
+    }
+
+    function setDailyTransferLimit(uint256 _newLimit) public onlyBankOwner {
+        require(_newLimit > 0, "DeBank: Daily limit must be greater than zero"); // The limit must be greater than 0.
+        dailyTransferLimit = _newLimit; // Updates the state variable.
+        emit DailyLimitUpdated(_newLimit); // Emits an event signaling the change.
+    }
+
+    function setFeeRate(uint256 _newRate) public onlyBankOwner {
+        require(_newRate <= 10000, "DeBank: Fee rate cannot exceed 100%"); // Ensures the fee rate does not exceed 100% (10000 basis points).
+        transferFeeRate = _newRate; // Updates the state variable.
+        emit FeeRateUpdated(_newRate); // Emits an event signaling the change.
+    }
+
+    function setFeeReceiver(address _newReceiver) public onlyBankOwner notZeroAddress(_newReceiver) {
+        feeReceiver = _newReceiver; // Updates the state variable.
+        emit FeeReceiverUpdated(_newReceiver); // Emits an event signaling the change.
+    }
+
+    function recoverVNDT(uint256 _amount) public onlyBankOwner {
+        // This function allows the bank owner to recover any VNDT accidentally sent directly
+        // to the DeBank contract address without going through the `deposit` function (e.g., user sent to wrong address).
+        // This is a safety mechanism to retrieve stuck assets.
+        require(vndToken.balanceOf(address(this)) >= _amount, "DeBank: Not enough VNDT in contract to recover"); // Ensures the contract has enough funds to recover.
+        require(vndToken.transfer(bankOwner, _amount), "DeBank: Failed to recover VNDT"); // Transfers VNDT to the bankOwner's wallet.
+    }
+
+    /**
+     * @dev Sets the global annual interest rate for new savings accounts.
+     * Only the bank owner (`bankOwner`) can call this function.
+     * @param _newRate The new annual interest rate in basis points (e.g., 500 = 5%).
      */
     function setSavingsInterestRate(uint256 _newRate) public onlyBankOwner {
-        savingsInterestRate = _newRate; // Cập nhật lãi suất tiết kiệm toàn cầu
+        savingsInterestRate = _newRate; // Updates the global savings interest rate.
     }
 }
