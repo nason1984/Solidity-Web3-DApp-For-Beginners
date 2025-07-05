@@ -43,8 +43,10 @@
 
 Ứng dụng này là một dự án demo về **Ngân hàng Phi Tập Trung (Decentralized Application - DApp)** được xây dựng trên nền tảng blockchain Ethereum. Nó mô phỏng các chức năng cơ bản của một ngân hàng truyền thống nhưng hoạt động hoàn toàn phi tập trung thông qua các smart contract.
 
-![Ảnh chụp màn hình ứng dụng Demo DApp](https://placehold.co/800x400/005082/CAF0F8?text=App+Demo+Solidity,+Web3,+DApp)
-*(Ảnh chụp màn hình ứng dụng Demo đang hoạt động)*
+![image](https://github.com/user-attachments/assets/f346291d-6d85-4dd0-8e9e-7973a79f0f41)
+
+![image](https://github.com/user-attachments/assets/7197e80b-a07a-4a88-9740-a98ea76f2de6)
+
 
 ### 1.2. Mục tiêu và Mục đích
 
@@ -538,6 +540,12 @@ Dự án Demo này là một nền tảng tuyệt vời để tiếp tục học
 ## 7. Đóng Góp
 
 Mọi đóng góp đều được hoan nghênh! Nếu bạn tìm thấy lỗi, có đề xuất cải tiến, hoặc muốn thêm tính năng mới, vui lòng tạo một "Issue" hoặc gửi "Pull Request" trên GitHub repository.
+
+## 8. Liên Hệ
+
+* **Tác giả:** Sơn Nguyễn
+* **GitHub:** https://github.com/nason1984/Solidity-Web3-DApp-For-Beginners
+* **Email:** 
 
 ## 8. Liên Hệ
 
