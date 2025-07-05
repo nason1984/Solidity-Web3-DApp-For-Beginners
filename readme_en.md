@@ -34,7 +34,6 @@
 6.  [Future Expansion & Improvements](#6-future-expansion--improvements)
 7.  [Contributions](#7-contributions)
 8.  [Contact](#8-contact)
-9.  [License](#9-license)
 
 ---
 
@@ -554,6 +553,3 @@ Contributions are welcome! If you find bugs, have suggestions for improvements, 
 * **GitHub:** https://github.com/nason1984/Solidity-Web3-DApp-For-Beginners
 * **Email:** 
 
-## 9. License
-
-This project is licensed under the MIT License. See the `LICENSE` file for more details.

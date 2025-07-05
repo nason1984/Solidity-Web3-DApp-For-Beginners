@@ -546,9 +546,3 @@ Mọi đóng góp đều được hoan nghênh! Nếu bạn tìm thấy lỗi, c
 * **Tác giả:** Sơn Nguyễn
 * **GitHub:** https://github.com/nason1984/Solidity-Web3-DApp-For-Beginners
 * **Email:** 
-
-## 8. Liên Hệ
-
-* **Tác giả:** Sơn Nguyễn
-* **GitHub:** https://github.com/nason1984/Solidity-Web3-DApp-For-Beginners
-* **Email:** 
