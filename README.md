@@ -43,10 +43,9 @@
 
 Ứng dụng này là một dự án demo về **Ngân hàng Phi Tập Trung (Decentralized Application - DApp)** được xây dựng trên nền tảng blockchain Ethereum. Nó mô phỏng các chức năng cơ bản của một ngân hàng truyền thống nhưng hoạt động hoàn toàn phi tập trung thông qua các smart contract.
 
-![image](https://github.com/user-attachments/assets/f346291d-6d85-4dd0-8e9e-7973a79f0f41)
+![image](https://github.com/user-attachments/assets/9b71155c-a136-4eda-bd70-953554666cbf)
 
-![image](https://github.com/user-attachments/assets/7197e80b-a07a-4a88-9740-a98ea76f2de6)
-
+![image](https://github.com/user-attachments/assets/1dcdd243-9585-4ff6-8f41-3ea399c7841a)
 
 ### 1.2. Mục tiêu và Mục đích
 
